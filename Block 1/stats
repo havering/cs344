@@ -1,0 +1,260 @@
+#!/bin/bash
+# Diana O'Haver
+# Program 1
+# Program to compute averages and medians from an input file of numbers
+
+# rounding and math functions to produce correct averages
+# example from http://stackoverflow.com/questions/2395284/round-a-divided-number-in-bash
+round() {
+	printf "%.$2f" "$1"
+}
+
+math() {
+	echo "$*" | bc -l
+}
+
+function counterIsZero {
+	echo "Counter is 0!"
+	exit 1
+}
+
+# grab process id into $ variable
+pid=$$
+
+# You should also use the trap command to catch interrupt, hangup, and terminate signals to remove the temporary files if the stats program is terminated unexpectedly.
+trap "rm -rf *.${pid}; exit 1" INT HUP TERM
+
+# conditional test to see if data passed in as file or stdin
+# uses the number of arguments to determine this
+numArgs=$#
+
+if [ "$numArgs" = "1" ];
+then
+ datafilepath="/dev/stdin"
+elif [ "$numArgs" = "2" ];
+then
+ datafilepath=$2
+fi
+
+#########################################
+# check for less arguments than expected
+#########################################
+
+if [ "$#" -lt 1 ];		# if less than 1 argument provided, output usage
+then
+  echo "Usage: stats {-rows|-cols} [file]" 1>&2    # send stdout to stderror
+  exit 1
+fi
+
+#########################################
+# check for more arguments than expected
+#########################################
+
+if [ "$#" -gt 2 ];		# if more than 2 arguments provided, invalid usage
+then
+  echo "Usage: stats {-rows|-cols} [file]" 1>&2    # send stdout to stderror
+  exit 1
+fi
+
+#########################################
+# check if valid flag hasn't been passed in
+#########################################
+
+if [[ $1 != -r* ]] && [[ $1 != -c* ]];
+then
+  echo "Usage: stats {-rows|-cols} [file]" 1>&2    # send stdout to stderror
+  exit 1
+fi
+
+#########################################
+# check if file exists
+#########################################
+if [[ ! -e "$datafilepath" ]];
+then
+	echo "stats: cannot read $datafilepath" 1>&2
+	exit 1
+fi
+
+#########################################
+# check if file is not able to be read
+#########################################
+if [[ ! -r "$datafilepath" ]];
+then
+	echo "stats: cannot read $datafilepath" 1>&2
+	exit 1
+fi
+
+#########################################
+# check if file is empty
+#########################################
+if [[ ! -s "$datafilepath" ]];
+then
+	echo "Error: file is empty." 1>&2
+	exit 1
+fi
+
+#########################################
+# couldn't get snippet from assignment specs to work, trying boolean
+# check for whether user wants rows or columns
+#########################################
+
+if [[ $1 == -r* ]];
+then
+  wantsRows=true
+  wantsCols=false
+fi
+
+if [[ $1 == -c* ]];
+then
+  wantsRows=false
+  wantsCols=true
+fi
+
+#########################################
+# Calculations for ROWS
+#########################################
+
+if [ "$wantsRows" = true ];
+then
+  echo "Average  Median"
+  while read i		# i is each row
+    do
+      sum=0			# initialize sum and count to calc average
+      count=0
+  
+      for num in $i		# for each number on the line currently being read in
+      do 
+        tempArray[$count]=$num		# assign num to spot in array
+        count=$(($count + 1)) 		# increment count to move through array
+        sum=$(($sum + $num))		# continue tracking running total
+      done
+	  
+	  # use rounding and math functions from above
+	  average=$(round $(math "$sum/$count") 0)
+
+
+	  # sort the array; algorithm adapted from http://linuxpoison.blogspot.com/2012/10/bash-script-how-to-sort-array.html
+	  
+	  # declare receiving array: http://www.tldp.org/LDP/abs/html/declareref.html
+	  declare -a sortArray
+	  
+	  # create a temp file: http://ss64.com/bash/touch.html
+	  touch tmp.$$		# appending .$$ attaches process ID to temp file - this enables simultaneous runs to track which files should be closed
+  
+	  # output existing unsorted array to temp file, then sort it using built-in functionality in bash
+	  for k in "${tempArray[@]}"; do
+	    echo $k >> tmp.$$
+		`sort -g tmp.$$ -o tmp.$$`
+	  done
+	  
+	  # read in back in to sortArray
+	  while read line; do
+        sortArray=(${sortArray[@]} $line)
+	  done < tmp.$$
+	  
+	  # remove the temp file
+	  rm tmp.$$
+	   
+	  # rounding issues in bash seem to be rendering this accurate regardless of number of numbers on line?
+      median=$(($count / 2))
+      echo "$average        ${sortArray[$median]}"
+      unset -v sortArray
+  done <$datafilepath
+fi
+
+#########################################
+# Calculations for COLUMNS
+#########################################
+
+if [ "$wantsCols" = true ];
+then
+  # swap the columns and rows - i.e. rows now contain values previously held by columns, so rows code above can be reused
+  # adapted from cut tutorial at: http://www.thegeekstuff.com/2013/06/cut-command-examples/
+  k=1	# variable to track column position
+  
+  while read line
+  do
+    proc=$(cut -f$k $datafilepath)
+	if [ "$proc" != "" ]; then			# if the line is blank, don't keep it
+	  echo $proc > temp.$$
+	  cat temp.$$ >> temp2.$$
+	fi
+	k=$(($k + 1))
+  done <$datafilepath
+
+  # remove newline that keeps showing up at EOF
+  # example sourced from: http://stackoverflow.com/questions/16365155/removing-a-newline-character-at-the-end-of-a-file
+  # truncate -s $(($(stat -c '%s' temp2)-1)) temp2 		# this issue disappeared using the grading file instead of the test file
+  
+  # temp files to hold averages and medians
+  touch avgs.$$
+  touch meds.$$
+
+  # then use the same strategy from above to calculate averages and medians
+  while read eachRow		# in the input file
+    do
+      summer=0							# initialize sum and count to calc average
+      counter=0
+  
+      for number in $eachRow			
+      do 
+        tempArray2[$counter]=$number	# assign num to spot in array
+        counter=$(($counter + 1)) 		# increment count to move through array
+        summer=$(($summer + $number))	# continue tracking running total
+      done
+      
+	  if [ "$counter" = 0 ];			# residual error handling from blank line problem above
+	  then
+		counterIsZero
+	  else
+		# use rounding and math functions from above
+		average2=$(round $(math "$summer/$counter") 0)
+	  fi
+	  
+	  # sort the array; algorithm adapted from http://linuxpoison.blogspot.com/2012/10/bash-script-how-to-sort-array.html
+	  
+	  # declare receiving array: http://www.tldp.org/LDP/abs/html/declareref.html
+	  declare -a sortArray2
+	  
+	  # create a temp file: http://ss64.com/bash/touch.html
+	  touch tmp2.$$
+
+	  # output existing unsorted array to temp file, then sort it
+	  for f in "${tempArray2[@]}"; do
+	    echo $f >> tmp2.$$
+		`sort -g tmp2.$$ -o tmp2.$$`
+	  done
+	  
+	  # read in back in to sortArray
+	  while read line2; do
+        sortArray2=(${sortArray2[@]} $line2)
+	  done < tmp2.$$
+	  
+	  # remove the temp file
+	  rm tmp2.$$
+	  
+	  # rounding issues in bash seem to be rendering this accurate regardless of number of numbers on line?
+      median2=$(($counter / 2))
+
+      echo -n $average2 >> avgs.$$
+      echo -n "	" >> avgs.$$
+      echo -n ${sortArray2[$median2]} >> meds.$$
+	  echo -n "	" >> meds.$$
+	  unset -v sortArray2
+  done < temp2.$$
+  
+  # at this point, the averages and medians should be in those temp files
+  # so they can just be output to match the specs
+  echo "Averages:"
+  cat avgs.$$
+  printf "\n"
+  echo "Medians:"
+  cat meds.$$
+  printf "\n"
+  
+  # clean up temp files
+  rm meds.$$
+  rm avgs.$$
+  rm temp.$$
+  rm temp2.$$
+fi     
