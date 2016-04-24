@@ -11,10 +11,6 @@
 #include <time.h>
 #include <string.h>
 
-typedef int bool;
-#define true 1
-#define false 0
-
 /* Define strings - since they won't change, global should be fine */
 
 char error[] = "HUH? I DON’T UNDERSTAND THAT ROOM. TRY AGAIN.";
@@ -72,22 +68,27 @@ int randConn() {
 }
 
 /* This tests if room1 is already connected to room2 */
-bool isConnected(room room1, room room2) {
+/* Return 0 for true, 1 for false */
+int isConnected(room room1, room room2) {
     int i;
     // if they are connected - shouldn't need this by the end of the very manual connection process
     if (room1.name == room2.name) {
-        return true;
+        return 0;
     }
 
     // loop through connections and make sure they aren't connected
     for (i = 0; i < room1.numConnections; i++) {
-        if (room1.connections[i] == room2.connections[i]) {     // if they match
-            if (room1.connections[i] != NULL) {                 // and they don't match because they're both null
-                return true;
+        if (room1.connections[i] != NULL) {                                 // don't bother checking null connections
+           // printf("conns[i].name is %d\n", room1.connections[i]->roomNum);
+
+            if (room1.connections[i]->roomNum == room2.roomNum) {                    // if they match
+                //printf("Returning 0 because room1->name == room2.name\n");
+                return 0;
             }
         }
     }
-    return false;               // if it makes it through the above and no match, return false
+   // printf("returning 1 because they are not connected\n");
+    return 1;               // if it makes it through the above and no match, return false
 }
 
 /* Connect two rooms together if possible */
@@ -103,7 +104,7 @@ void connectRooms(room *room1, room *room2) {
         }
     }
 
-    printf("connCount1 = %d\n", connCount1);
+    //printf("connCount1 = %d\n", connCount1);
     // if there is no room for more connections to room 1, return
     if (connCount1 >= room1->numConnections) {
         return;
@@ -115,7 +116,7 @@ void connectRooms(room *room1, room *room2) {
         }
     }
 
-    printf("connCount2 = %d\n", connCount2);
+    //printf("connCount2 = %d\n", connCount2);
     // if there is no room for more connections to room 2, return
     if (connCount2 >= room2->numConnections) {
         return;
@@ -126,11 +127,11 @@ void connectRooms(room *room1, room *room2) {
     room1->connections[connCount1] = room2;
     room2->connections[connCount2] = room1;
 
-    printf("room1 name is %s\n", room1->name);
-    printf("room2 name is %s\n", room2->name);
-
-    printf("room1 number is %d\n", room1->roomNum);
-    printf("room2 number is %d\n", room2->roomNum);
+//    printf("room1 name is %s\n", room1->name);
+//    printf("room2 name is %s\n", room2->name);
+//
+//    printf("room1 number is %d\n", room1->roomNum);
+//    printf("room2 number is %d\n", room2->roomNum);
 
     return;
 }
@@ -417,37 +418,37 @@ void generateRoomFiles() {
             findConn = randConn();
 
             if (findConn == 2) {
-                if (isConnected(one, two) == false) {
+                if (isConnected(one, two) == 1) {
                     connectRooms(&one, &two);
                 }
             }
 
             if (findConn == 3) {
-                if (isConnected(one, three) == false) {
+                if (isConnected(one, three) == 1) {
                     connectRooms(&one, &three);
                 }
             }
 
             if (findConn == 4) {
-                if (isConnected(one, four) == false) {
+                if (isConnected(one, four) == 1) {
                     connectRooms(&one, &four);
                 }
             }
 
             if (findConn == 5) {
-                if (isConnected(one, five) == false) {
+                if (isConnected(one, five) == 1) {
                     connectRooms(&one, &five);
                 }
             }
 
             if (findConn == 6) {
-                if (isConnected(one, six) == false) {
+                if (isConnected(one, six) == 1) {
                     connectRooms(&one, &six);
                 }
             }
 
             if (findConn == 7) {
-                if (isConnected(one, seven) == false) {
+                if (isConnected(one, seven) == 1) {
                     connectRooms(&one, &seven);
                 }
             }
