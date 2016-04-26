@@ -46,7 +46,8 @@ typedef struct room room;               // so i can just declare rooms without s
 
 struct room {
     int roomNum;
-    int numConnections;
+    int tally;                          // tracking current number of connections
+    int numConnections;                 // tracking total allowed connections
     int roomtype;
     room *connections[6];                // better - array of room connections so can be iterated through
     char name[10];                        // flexible array member is a terrible idea, use static value
@@ -82,12 +83,11 @@ int isConnected(room room1, room room2) {
            // printf("conns[i].name is %d\n", room1.connections[i]->roomNum);
 
             if (room1.connections[i]->roomNum == room2.roomNum) {                    // if they match
-                //printf("Returning 0 because room1->name == room2.name\n");
+                //printf("Returning 0 because %s is connected to %s\n", room1.name, room2.name);
                 return 0;
             }
         }
     }
-   // printf("returning 1 because they are not connected\n");
     return 1;               // if it makes it through the above and no match, return false
 }
 
@@ -127,11 +127,8 @@ void connectRooms(room *room1, room *room2) {
     room1->connections[connCount1] = room2;
     room2->connections[connCount2] = room1;
 
-//    printf("room1 name is %s\n", room1->name);
-//    printf("room2 name is %s\n", room2->name);
-//
-//    printf("room1 number is %d\n", room1->roomNum);
-//    printf("room2 number is %d\n", room2->roomNum);
+    room1->tally = room1->tally + 1;
+    room2->tally = room2->tally + 1;
 
     return;
 }
@@ -195,6 +192,7 @@ void generateRoomFiles() {
     // set up the rest of the start room
     one.roomtype = START_ROOM;
     one.roomNum = 1;
+    one.tally = 0;
 
     // find the number of connections it can have
     one.numConnections = randNum();
@@ -228,6 +226,7 @@ void generateRoomFiles() {
 
     two.roomtype = MID_ROOM;
     two.roomNum = 2;
+    two.tally = 0;
 
     // find the number of connections it can have
     two.numConnections = randNum();
@@ -257,6 +256,7 @@ void generateRoomFiles() {
 
     three.roomtype = MID_ROOM;
     three.roomNum = 3;
+    three.tally = 0;
 
     // find the number of connections it can have
     three.numConnections = randNum();
@@ -286,6 +286,7 @@ void generateRoomFiles() {
 
     four.roomtype = MID_ROOM;
     four.roomNum = 4;
+    four.tally = 0;
 
     // find the number of connections it can have
     four.numConnections = randNum();
@@ -316,6 +317,7 @@ void generateRoomFiles() {
 
     five.roomtype = MID_ROOM;
     five.roomNum = 5;
+    five.tally = 0;
 
     // find the number of connections it can have
     five.numConnections = randNum();
@@ -326,7 +328,6 @@ void generateRoomFiles() {
 
     for (i = 0; i < 10; i++) {
         if (i == findName) {
-           // while (strcmp(roomNames[i], "Taken") == 0) {
               while (roomNames[i] == NULL) {
                 if (i == 10) {
                     i = 0;
@@ -337,7 +338,6 @@ void generateRoomFiles() {
             }
             strcpy(six.name, roomNames[i]);
             // set that place to null so it won't be used again
-            //strcpy(roomNames[i], "Taken");
             roomNames[i] = NULL;
             break;
         }
@@ -345,6 +345,7 @@ void generateRoomFiles() {
 
     six.roomtype = MID_ROOM;
     six.roomNum = 6;
+    six.tally = 0;
 
     // find the number of connections it can have
     six.numConnections = randNum();
@@ -355,7 +356,6 @@ void generateRoomFiles() {
 
     for (i = 0; i < 10; i++) {
         if (i == findName) {
-           // while (strcmp(roomNames[i], "Taken") == 0) {
               while (roomNames[i] == NULL) {
                 if (i == 10) {
                     i = 0;
@@ -366,7 +366,6 @@ void generateRoomFiles() {
             }
             strcpy(seven.name, roomNames[i]);
             // set that place to null so it won't be used again
-            //strcpy(roomNames[i], "Taken");
             roomNames[i] = NULL;
             break;
         }
@@ -375,31 +374,23 @@ void generateRoomFiles() {
 
     seven.roomtype = END_ROOM;
     seven.roomNum = 7;
+    seven.tally = 0;
 
     // find the number of connections it can have
     seven.numConnections = randNum();
 
-    printf("One has %d connections\n", one.numConnections);
-    printf("Two has %d connections\n", two.numConnections);
-    printf("Three has %d connections\n", three.numConnections);
-    printf("Four has %d connections\n", four.numConnections);
-    printf("Five has %d connections\n", five.numConnections);
-    printf("Six has %d connections\n", six.numConnections);
-    printf("Seven has %d connections\n", seven.numConnections);
-
-//    printf("One's name is %s\n", one.name);
-//    printf("Two's name is %s\n", two.name);
-//    printf("Three's name is %s\n", three.name);
-//    printf("Four's name is %s\n", four.name);
-//    printf("Five's name is %s\n", five.name);
-//    printf("Six's name is %s\n", six.name);
-//    printf("Seven's name is %s\n", seven.name);
+    printf("One (%s) has %d connections\n", one.name, one.numConnections);
+    printf("Two (%s) has %d connections\n", two.name, two.numConnections);
+    printf("Three (%s) has %d connections\n", three.name, three.numConnections);
+    printf("Four (%s) has %d connections\n", four.name, four.numConnections);
+    printf("Five (%s) has %d connections\n", five.name, five.numConnections);
+    printf("Six (%s) has %d connections\n", six.name, six.numConnections);
+    printf("Seven (%s) has %d connections\n", seven.name, seven.numConnections);
 
     // now there are seven rooms named one through seven
     // set up the connections
 
     int findConn;
-
 
     // loop through connections and make sure that they're null for everyone before we start making connections
 
@@ -411,45 +402,58 @@ void generateRoomFiles() {
     makeNull(&six);
     makeNull(&seven);
 
+
+    /** Hook up room one **/
     for (i = 0; i < one.numConnections; i++) {
-        //room *connectedRoom;
 
         while (one.connections[i] == NULL) {
             findConn = randConn();
 
             if (findConn == 2) {
-                if (isConnected(one, two) == 1) {
-                    connectRooms(&one, &two);
+                if (two.tally < two.numConnections) {
+                    if (isConnected(one, two) == 1) {
+                        connectRooms(&one, &two);
+                    }
                 }
             }
 
             if (findConn == 3) {
-                if (isConnected(one, three) == 1) {
-                    connectRooms(&one, &three);
+                if (three.tally < three.numConnections) {
+                    if (isConnected(one, three) == 1) {
+                        connectRooms(&one, &three);
+                    }
                 }
             }
 
             if (findConn == 4) {
-                if (isConnected(one, four) == 1) {
-                    connectRooms(&one, &four);
+                if (four.tally < four.numConnections) {
+                    if (isConnected(one, four) == 1) {
+                        connectRooms(&one, &four);
+                    }
                 }
             }
 
             if (findConn == 5) {
-                if (isConnected(one, five) == 1) {
-                    connectRooms(&one, &five);
+                 if (five.tally < five.numConnections) {
+                    if (isConnected(one, five) == 1) {
+                        connectRooms(&one, &five);
+                    }
                 }
             }
 
             if (findConn == 6) {
-                if (isConnected(one, six) == 1) {
-                    connectRooms(&one, &six);
+                if (six.tally < six.numConnections) {
+                    if (isConnected(one, six) == 1) {
+                        connectRooms(&one, &six);
+                    }
                 }
             }
 
             if (findConn == 7) {
-                if (isConnected(one, seven) == 1) {
-                    connectRooms(&one, &seven);
+                if (seven.tally < seven.numConnections) {
+                    if (isConnected(one, seven) == 1) {
+                        connectRooms(&one, &seven);
+                    }
                 }
             }
         }
@@ -460,7 +464,7 @@ void generateRoomFiles() {
 
 
     // at the end of this, one should have between 3 and 6 connections
-    printf("one connections are:\n");
+    printf("%s (1) connections are:\n", one.name);
 
     for (i = 0; i < one.numConnections; i++) {
         if (one.connections[i] == NULL) {
@@ -468,6 +472,410 @@ void generateRoomFiles() {
         }
         else {
             printf("%s\n", one.connections[i]->name);
+        }
+    }
+
+    /** Hook up room two **/
+    for (i = 0; i < two.numConnections; i++) {
+
+        while (two.connections[i] == NULL) {
+            findConn = randConn();
+
+            if (findConn == 1) {
+                if (one.tally < one.numConnections) {
+                    if (isConnected(two, one) == 1) {
+                        connectRooms(&two, &one);
+                    }
+                }
+            }
+
+            if (findConn == 3) {
+                if (three.tally < three.numConnections) {
+                if (isConnected(two, three) == 1) {
+                    connectRooms(&two, &three);
+                }
+            }
+            }
+
+            if (findConn == 4) {
+                if (four.tally < four.numConnections) {
+                    if (isConnected(two, four) == 1) {
+                        connectRooms(&two, &four);
+                    }
+                }
+            }
+
+            if (findConn == 5) {
+                if (five.tally < five.numConnections) {
+                if (isConnected(two, five) == 1) {
+                    connectRooms(&two, &five);
+                }
+                }
+            }
+
+            if (findConn == 6) {
+                if (six.tally < six.numConnections) {
+                if (isConnected(two, six) == 1) {
+                    connectRooms(&two, &six);
+                }
+                }
+            }
+
+            if (findConn == 7) {
+                if (seven.tally < seven.numConnections) {
+                if (isConnected(two, seven) == 1) {
+                    connectRooms(&two, &seven);
+                }
+                }
+            }
+        }
+    }
+
+    printf("%s (2) connections are:\n", two.name);
+
+    for (i = 0; i < two.numConnections; i++) {
+        if (two.connections[i] == NULL) {
+            printf("Null value where you shouldn't have one\n");
+        }
+        else {
+            printf("%s\n", two.connections[i]->name);
+        }
+    }
+
+    /** Hook up room three **/
+    for (i = 0; i < three.numConnections; i++) {
+
+        while (three.connections[i] == NULL) {
+            findConn = randConn();
+
+            if (findConn == 2) {
+                if (two.tally < two.numConnections) {
+                if (isConnected(three, two) == 1) {
+                    connectRooms(&three, &two);
+                }
+                }
+            }
+
+            if (findConn == 1) {
+                    if (one.tally < one.numConnections) {
+                if (isConnected(three, one) == 1) {
+                    connectRooms(&three, &one);
+                }
+                    }
+            }
+
+            if (findConn == 4) {
+                    if (four.tally < four.numConnections) {
+                if (isConnected(three, four) == 1) {
+                    connectRooms(&three, &four);
+                }
+                    }
+            }
+
+            if (findConn == 5) {
+                    if (five.tally < five.numConnections) {
+                if (isConnected(three, five) == 1) {
+                    connectRooms(&three, &five);
+                }
+                    }
+            }
+
+            if (findConn == 6) {
+                    if (six.tally < six.numConnections) {
+                if (isConnected(three, six) == 1) {
+                    connectRooms(&three, &six);
+                }
+                    }
+            }
+
+            if (findConn == 7) {
+                    if (seven.tally < seven.numConnections) {
+                if (isConnected(three, seven) == 1) {
+                    connectRooms(&three, &seven);
+                }
+                    }
+            }
+        }
+    }
+
+    printf("%s (3) connections are:\n", three.name);
+
+    for (i = 0; i < three.numConnections; i++) {
+        if (three.connections[i] == NULL) {
+            printf("Null value where you shouldn't have one\n");
+        }
+        else {
+            printf("%s\n", three.connections[i]->name);
+        }
+    }
+
+    /** Hook up room four **/
+    for (i = 0; i < four.numConnections; i++) {
+
+        while (four.connections[i] == NULL) {
+            findConn = randConn();
+
+            if (findConn == 2) {
+                    if (two.tally < two.numConnections) {
+                if (isConnected(four, two) == 1) {
+                    connectRooms(&four, &two);
+                }
+            }
+            }
+
+            if (findConn == 3) {
+                    if (three.tally < three.numConnections) {
+                if (isConnected(four, three) == 1) {
+                    connectRooms(&four, &three);
+                }
+            }
+            }
+
+            if (findConn == 1) {
+                    if (one.tally < one.numConnections) {
+                if (isConnected(four, one) == 1) {
+                    connectRooms(&four, &one);
+                }
+                    }
+            }
+
+            if (findConn == 5) {
+                    if (five.tally < five.numConnections) {
+                if (isConnected(four, five) == 1) {
+                    connectRooms(&four, &five);
+                }
+                    }
+            }
+
+            if (findConn == 6) {
+                    if (six.tally < six.numConnections) {
+                if (isConnected(four, six) == 1) {
+                    connectRooms(&four, &six);
+                }
+                    }
+            }
+
+            if (findConn == 7) {
+                    if (seven.tally < seven.numConnections) {
+                if (isConnected(four, seven) == 1) {
+                    connectRooms(&four, &seven);
+                }
+            }
+            }
+        }
+    }
+
+    printf("%s (4) connections are:\n", four.name);
+
+    for (i = 0; i < four.numConnections; i++) {
+        if (four.connections[i] == NULL) {
+            printf("Null value where you shouldn't have one\n");
+        }
+        else {
+            printf("%s\n", four.connections[i]->name);
+        }
+    }
+
+    /** Hook up room five **/
+    for (i = 0; i < five.numConnections; i++) {
+
+        while (five.connections[i] == NULL) {
+            findConn = randConn();
+
+            if (findConn == 2) {
+                    if (two.tally < two.numConnections) {
+                if (isConnected(five, two) == 1) {
+                    connectRooms(&five, &two);
+                }
+                    }
+            }
+
+            if (findConn == 3) {
+                    if (three.tally < three.numConnections) {
+                if (isConnected(five, three) == 1) {
+                    connectRooms(&five, &three);
+                }
+            }
+            }
+
+            if (findConn == 4) {
+                    if (four.tally < four.numConnections) {
+                if (isConnected(five, four) == 1) {
+                    connectRooms(&five, &four);
+                }
+            }
+            }
+
+            if (findConn == 1) {
+                    if (one.tally < one.numConnections) {
+                if (isConnected(five, one) == 1) {
+                    connectRooms(&five, &one);
+                }
+                    }
+            }
+
+            if (findConn == 6) {
+                    if (six.tally < six.numConnections) {
+                if (isConnected(five, six) == 1) {
+                    connectRooms(&five, &six);
+                }
+                    }
+            }
+
+            if (findConn == 7) {
+                    if (seven.tally < seven.numConnections) {
+                if (isConnected(five, seven) == 1) {
+                    connectRooms(&five, &seven);
+                }
+                }
+            }
+        }
+    }
+
+    printf("%s (5) connections are:\n", five.name);
+
+    for (i = 0; i < five.numConnections; i++) {
+        if (five.connections[i] == NULL) {
+            printf("Null value where you shouldn't have one\n");
+        }
+        else {
+            printf("%s\n", five.connections[i]->name);
+        }
+    }
+
+    /** Hook up room six **/
+    for (i = 0; i < six.numConnections; i++) {
+
+        while (six.connections[i] == NULL) {
+            findConn = randConn();
+
+            if (findConn == 2) {
+                    if (two.tally < two.numConnections) {
+                if (isConnected(six, two) == 1) {
+                    connectRooms(&six, &two);
+                }
+                    }
+            }
+
+            if (findConn == 3) {
+                    if (three.tally < three.numConnections) {
+                if (isConnected(six, three) == 1) {
+                    connectRooms(&six, &three);
+                }
+            }
+            }
+
+            if (findConn == 4) {
+                    if (four.tally < four.numConnections) {
+                if (isConnected(six, four) == 1) {
+                    connectRooms(&six, &four);
+                }
+            }
+            }
+
+            if (findConn == 5) {
+                    if (five.tally < five.numConnections) {
+                if (isConnected(six, five) == 1) {
+                    connectRooms(&six, &five);
+                }
+            }
+            }
+
+            if (findConn == 1) {
+                    if (one.tally < one.numConnections) {
+                if (isConnected(six, one) == 1) {
+                    connectRooms(&six, &one);
+                }
+            }
+            }
+
+            if (findConn == 7) {
+                    if (seven.tally < seven.numConnections) {
+                if (isConnected(six, seven) == 1) {
+                    connectRooms(&six, &seven);
+                }
+                    }
+            }
+        }
+    }
+
+    printf("%s (6) connections are:\n", six.name);
+
+    for (i = 0; i < six.numConnections; i++) {
+        if (six.connections[i] == NULL) {
+            printf("Null value where you shouldn't have one\n");
+        }
+        else {
+            printf("%s\n", six.connections[i]->name);
+        }
+    }
+
+    /** Hook up room seven **/
+    for (i = 0; i < seven.numConnections; i++) {
+
+        while (seven.connections[i] == NULL) {
+            findConn = randConn();
+
+            if (findConn == 2) {
+                    if (two.tally < two.numConnections) {
+                if (isConnected(seven, two) == 1) {
+                    connectRooms(&seven, &two);
+                }
+                    }
+            }
+
+            if (findConn == 3) {
+                    if (three.tally < three.numConnections) {
+                if (isConnected(seven, three) == 1) {
+                    connectRooms(&seven, &three);
+                }
+            }
+            }
+
+            if (findConn == 4) {
+                    if (four.tally < four.numConnections) {
+                if (isConnected(seven, four) == 1) {
+                    connectRooms(&seven, &four);
+                }
+                    }
+            }
+
+            if (findConn == 5) {
+                    if (five.tally < five.numConnections) {
+                if (isConnected(seven, five) == 1) {
+                    connectRooms(&seven, &five);
+                }
+            }
+            }
+
+            if (findConn == 6) {
+                    if (six.tally < six.numConnections) {
+                if (isConnected(seven, six) == 1) {
+                    connectRooms(&seven, &six);
+                }
+            }
+            }
+
+            if (findConn == 1) {
+                    if (one.tally < one.numConnections) {
+                if (isConnected(seven, one) == 1) {
+                    connectRooms(&seven, &one);
+                }
+                    }
+            }
+        }
+    }
+
+
+    // at the end of this, one should have between 3 and 6 connections
+    printf("%s (7) connections are:\n", seven.name);
+
+    for (i = 0; i < seven.numConnections; i++) {
+        if (seven.connections[i] == NULL) {
+            printf("Null value where you shouldn't have one\n");
+        }
+        else {
+            printf("%s\n", seven.connections[i]->name);
         }
     }
 }
