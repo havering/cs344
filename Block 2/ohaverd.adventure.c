@@ -46,9 +46,9 @@ struct room {
     int roomNum;
     int tally;                          // tracking current number of connections
     int numConnections;                 // tracking total allowed connections
-    char roomtype[12];                   // type of room - moved to string instead of enum
     room *connections[6];                // better - array of room connections so can be iterated through
-    char name[10];                        // flexible array member is a terrible idea, use static value
+    char name[20];                        // flexible array member is a terrible idea, use static value
+    char roomtype[20];                   // type of room - moved to string instead of enum
 };
 
 /* Generate a random number between 3 and 6 to determine how many connections room will have */
@@ -61,9 +61,9 @@ int randRoom() {
     return rand() % (9 + 0 - 0) + 0;
 }
 
-/* Generate random number between 1 and 7 to determine which room the room should be connected with */
+/* Generate random number between 0 and 6 to determine which room the room should be connected with */
 int randConn() {
-    return rand() % (7 + 1 - 1) + 1;
+    return rand() % (6 + 0 - 0) + 0;
 }
 
 /* Generate random number between 0 and 6 to determine what the room type is */
@@ -73,19 +73,19 @@ int randType() {
 
 /* This tests if room1 is already connected to room2 */
 /* Return 0 for true, 1 for false */
-int isConnected(room room1, room room2) {
+int isConnected(room *room1, room *room2) {
     int i;
     // if they are connected - shouldn't need this by the end of the very manual connection process
-    if (room1.name == room2.name) {
+    if (room1->name == room2->name) {
         return 0;
     }
 
     // loop through connections and make sure they aren't connected
-    for (i = 0; i < room1.numConnections; i++) {
-        if (room1.connections[i] != NULL) {                                 // don't bother checking null connections
+    for (i = 0; i < room1->numConnections; i++) {
+        if (room1->connections[i] != NULL) {                                 // don't bother checking null connections
            // printf("conns[i].name is %d\n", room1.connections[i]->roomNum);
 
-            if (room1.connections[i]->roomNum == room2.roomNum) {                    // if they match
+            if (room1->connections[i]->roomNum == room2->roomNum) {                    // if they match
                 //printf("Returning 0 because %s is connected to %s\n", room1.name, room2.name);
                 return 0;
             }
@@ -256,7 +256,33 @@ void generateRoomFiles() {
 
     // loop through connections and make sure that they're null for everyone before we start making connections
 
+    for (i = 0; i < 7; i++) {
+        makeNull(activeRooms[i]);
+    }
 
+    // now set up the connections
+
+    for (i = 0; i < 7; i++) {
+        for (k = 0; k < activeRooms[i]->numConnections; k++) {
+            while (activeRooms[i]->connections[k] == NULL) {
+                findConn = randConn();
+
+                if (findConn != i) {
+                    if (isConnected(activeRooms[i], activeRooms[findConn]) == 1) {
+                    connectRooms(activeRooms[i], activeRooms[findConn]);
+                    }
+                }
+            }
+        }
+    }
+
+    for (i = 0; i < 7; i++) {
+        printf("Connections for %s: \n", activeRooms[i]->name);
+
+        for (k = 0; k < activeRooms[i]->numConnections; k++) {
+            printf("%s\n", activeRooms[i]->connections[k]->name);
+        }
+    }
 //
 //    /** Hook up room one **/
 //    for (i = 0; i < one.numConnections; i++) {
