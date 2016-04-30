@@ -149,9 +149,11 @@ void generateRoomFiles() {
     int buffer = 30;
     int pid = getpid();
     char prefix[] = "ohaverd.rooms.";
-    int i, k;
+    int i, k, j;
     int findName, findType;
     room *activeRooms[7];               // array of pointers to room to  more easily loop through rooms
+    int startFlag = 0;                  // track if start room has been taken yet
+    int endFlag = 0;                    // track if end room has been taken yet
 
     char *dirName = malloc(buffer);
 
@@ -166,7 +168,7 @@ void generateRoomFiles() {
     }
 
     // put the room name options into an array of pointers to the actual static strings
-    const char *roomNames[10];
+    char *roomNames[10];
     roomNames[0] = red;
     roomNames[1] = orange;
     roomNames[2] = yellow;
@@ -179,7 +181,7 @@ void generateRoomFiles() {
     roomNames[9] = pink;
 
     // put the room type options into an array of pointers so the same will work
-    const char *roomTypes[6];
+    char *roomTypes[7];
     roomTypes[0] = start;
     roomTypes[1] = mid;
     roomTypes[2] = mid;
@@ -224,22 +226,40 @@ void generateRoomFiles() {
         findType = randType();
 
         // assign what room type the room is
-        for (k = 0; k < 7; k++) {
-            if (k == findType) {
-                while (roomTypes[k] == NULL) {
-                    if (k == 7) {
-                        k = 0;
-                    }
-                    else {
-                        k++;
-                    }
-                }
-                strcpy(activeRooms[i]->roomtype, roomTypes[k]);
-                // set that place to null so it won't be used again
-                roomTypes[k] = NULL;
-                break;
-            }
+
+        if (findType == 0 && startFlag == 0) {
+            strcpy(activeRooms[i]->roomtype, start);
+            startFlag = 1;
         }
+
+        else if (findType == 6 && endFlag == 0) {
+            strcpy(activeRooms[i]->roomtype, end);
+            endFlag = 1;
+        }
+
+        else {
+            strcpy(activeRooms[i]->roomtype, mid);
+        }
+//        for (j = 0; j < 7; j++) {
+//            printf("j is %d\n", j);
+//            if (j == findType) {
+//                while (roomTypes[j] == NULL) {
+//                    if (j == 7) {
+//                        j = 0;
+//                    }
+//                    else {
+//                        j++;
+//                    }
+//                }
+//                printf("Assigning roomType of %s to %s\n", roomTypes[j], activeRooms[i]->name);
+//
+//                strcpy(activeRooms[i]->roomtype, roomTypes[j]);
+//                //printf("j is %d\n", j);
+//                // set that place to null so it won't be used again
+//                roomTypes[j] = NULL;
+//                break;
+//            }
+//        }
     }
 
 
@@ -262,27 +282,27 @@ void generateRoomFiles() {
 
     // now set up the connections
 
-    for (i = 0; i < 7; i++) {
-        for (k = 0; k < activeRooms[i]->numConnections; k++) {
-            while (activeRooms[i]->connections[k] == NULL) {
-                findConn = randConn();
-
-                if (findConn != i) {
-                    if (isConnected(activeRooms[i], activeRooms[findConn]) == 1) {
-                    connectRooms(activeRooms[i], activeRooms[findConn]);
-                    }
-                }
-            }
-        }
-    }
-
-    for (i = 0; i < 7; i++) {
-        printf("Connections for %s: \n", activeRooms[i]->name);
-
-        for (k = 0; k < activeRooms[i]->numConnections; k++) {
-            printf("%s\n", activeRooms[i]->connections[k]->name);
-        }
-    }
+//    for (i = 0; i < 7; i++) {
+//        for (k = 0; k < activeRooms[i]->numConnections; k++) {
+//            while (activeRooms[i]->connections[k] == NULL) {
+//                findConn = randConn();
+//
+//                if (findConn != i) {
+//                    if (isConnected(activeRooms[i], activeRooms[findConn]) == 1) {
+//                    connectRooms(activeRooms[i], activeRooms[findConn]);
+//                    }
+//                }
+//            }
+//        }
+//    }
+//
+//    for (i = 0; i < 7; i++) {
+//        printf("Connections for %s: \n", activeRooms[i]->name);
+//
+//        for (k = 0; k < activeRooms[i]->numConnections; k++) {
+//            printf("%s\n", activeRooms[i]->connections[k]->name);
+//        }
+//    }
 //
 //    /** Hook up room one **/
 //    for (i = 0; i < one.numConnections; i++) {
