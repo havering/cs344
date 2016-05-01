@@ -138,12 +138,10 @@ void jumbler(char **nameArray, size_t size) {
 }
 
 /* Separating directory making into its own function for cleanliness */
-void makeDirectory() {
+void makeDirectory(char *dirName) {
     int buffer = 30;
     int pid = getpid();
     char prefix[] = "ohaverd.rooms.";
-
-    char *dirName = malloc(buffer);
 
     // mash everything together into one string called dirName
     snprintf(dirName, buffer, "%s%d", prefix, pid);
@@ -158,7 +156,7 @@ void makeDirectory() {
 }
 
 /* Function to generate room files, placed in an array */
-struct room generateRoomFiles() {
+void generateRoomFiles(char *dirName) {
     int i, k;
     room activeRooms[7];               // array of pointers to room to  more easily loop through rooms
 
@@ -231,15 +229,53 @@ struct room generateRoomFiles() {
         makeNull(&activeRooms[i]);
     }
 
+    // now activeRooms has 7 random rooms with random connections already assigned
+    // write those newly created rooms to their respective files
+
+    // open the directory first
+    opendir(dirName);
+
+    for (i = 0; i < 7; i++) {
+        char tempString[100];
+
+        // copy directory name over to string
+        strcpy(tempString, dirName);
+
+        // add a slash
+        strcat(tempString, "/");
+
+        // append the room name
+        strcat(tempString, activeRooms[i].name);
+
+        // creating/writing to a file in C: http://www.tutorialspoint.com/cprogramming/c_file_io.htm
+        FILE *fp;
+
+        fp = fopen(tempString, "w");
+
+        // write room name as first step
+        fprintf(fp, "ROOM NAME: %s\n", activeRooms[i].name);
+
+//        // time to build connections
+//        int finder = 0;
+//
+//        while (activeRooms[i].tally < 3) {
+//
+//        }
+    }
+
+
 }
 
 
 int main(void) {
     srand(time(NULL));      // seed rand
+    int buffer = 30;
+    char *dirName = malloc(buffer);
 
-    makeDirectory();
 
-    generateRoomFiles();
+    makeDirectory(dirName);
+
+    generateRoomFiles(dirName);
 
     return 0;
 }
