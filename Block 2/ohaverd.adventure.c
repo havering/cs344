@@ -137,13 +137,11 @@ void jumbler(char **nameArray, size_t size) {
     }
 }
 
-void generateRoomFiles() {
-    printf("top of functin");
+/* Separating directory making into its own function for cleanliness */
+void makeDirectory() {
     int buffer = 30;
     int pid = getpid();
     char prefix[] = "ohaverd.rooms.";
-    int i, k;
-    room activeRooms[7];               // array of pointers to room to  more easily loop through rooms
 
     char *dirName = malloc(buffer);
 
@@ -156,6 +154,13 @@ void generateRoomFiles() {
     if (stat(dirName, &st) == -1) {         // if it is -1, then the directory doesn't already exist
         mkdir(dirName, 0755);              // 755 means that everyone can read and execute, but only owner can write
     }
+    return;
+}
+
+/* Function to generate room files, placed in an array */
+struct room generateRoomFiles() {
+    int i, k;
+    room activeRooms[7];               // array of pointers to room to  more easily loop through rooms
 
     // put the room name options into an array of pointers to the actual static strings
     char *roomNames[10];
@@ -194,7 +199,6 @@ void generateRoomFiles() {
     // mix up the room types
     jumbler(roomTypes, 7);
 
-    printf("Before room setup");
     for (i = 0; i < 7; i++) {
         // set the name of the room
         strcpy(activeRooms[i].name, usedRooms[i]);
@@ -216,15 +220,10 @@ void generateRoomFiles() {
 
 
 
-//    for (i = 0; i < 7; i++) {
-//        printf("%s has %d connections\n", activeRooms[i]->name, activeRooms[i]->numConnections);
-//        printf("%s is of room type %s\n", activeRooms[i]->name, activeRooms[i]->roomtype);
-//    }
-
-    // now there are seven rooms named one through seven
-    // set up the connections
-
-    int findConn;
+    for (i = 0; i < 7; i++) {
+        printf("%s has %d connections\n", activeRooms[i].name, activeRooms[i].numConnections);
+        printf("%s is of room type %s\n", activeRooms[i].name, activeRooms[i].roomtype);
+    }
 
     // loop through connections and make sure that they're null for everyone before we start making connections
 
@@ -232,64 +231,14 @@ void generateRoomFiles() {
         makeNull(&activeRooms[i]);
     }
 
-    // now set up the connections
-    int finder = 0;
-    printf("Before connection making");
-    for (i = 0; i < 7; i++) {
-        while (activeRooms[i].tally < 3) {
-            findConn = randConn();
-
-            for (k = 0; k < activeRooms[i].numConnections; k++) {
-                if (activeRooms[i].connections[k]->roomNum == activeRooms[findConn].roomNum) {
-                    finder = 1;
-                }
-            }
-
-            if (activeRooms[i].roomNum == activeRooms[findConn].roomNum) {
-                finder = 1;
-            }
-
-            if (activeRooms[i].tally == 6) {
-                finder = 1;
-            }
-
-            if (activeRooms[findConn].tally == 6) {
-                finder = 1;
-            }
-
-            if (finder != 1) {
-                int runTotal = activeRooms[i].tally;
-                memcpy(&activeRooms[i].connections[runTotal], &activeRooms[findConn], sizeof(room));
-                //activeRooms[i].connections[runTotal] = activeRooms[findConn];
-                activeRooms[i].tally++;
-
-                runTotal = activeRooms[findConn].tally;
-
-                memcpy(&activeRooms[findConn].connections[runTotal], &activeRooms[i], sizeof(room));
-                //activeRooms[findConn].connections[activeRooms[findConn].tally] = activeRooms[i];
-                activeRooms[findConn].tally++;
-            }
-        }
-        finder = 0;
-
-    }
-    for (i = 0; i < 7; i++) {
-        printf("Connections for %s: \n", activeRooms[i].name);
-
-        for (k = 0; k < activeRooms[i].numConnections; k++) {
-            if (activeRooms[i].connections[k] == NULL) {
-                printf("null where there shouldn't be one");
-            }
-            printf("%s\n", activeRooms[i].connections[k]->name);
-        }
-    }
-
-
 }
+
 
 int main(void) {
     srand(time(NULL));      // seed rand
-    printf("wtf");
+
+    makeDirectory();
+
     generateRoomFiles();
 
     return 0;
