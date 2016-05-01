@@ -57,27 +57,18 @@ int randNum() {
     return rand() % (6 + 1 - 3) + 3;
 }
 
-/* Generate random number between 0 and 9 to determine what the room's name is */
-int randRoom() {
-    return rand() % (9 + 0 - 0) + 0;
-}
-
 /* Generate random number between 0 and 6 to determine which room the room should be connected with */
 int randConn() {
-    return rand() % (6 + 0 - 0) + 0;
-}
-
-/* Generate random number between 0 and 6 to determine what the room type is */
-int randType() {
-    return rand() % (6 + 0 - 0) + 0;
+    return rand() % 7;
 }
 
 /* This tests if room1 is already connected to room2 */
 /* Return 0 for true, 1 for false */
 int isConnected(room *room1, room *room2) {
     int i;
-    // if they are connected - shouldn't need this by the end of the very manual connection process
-    if (room1->name == room2->name) {
+
+    // if they are connected
+    if (strcmp(room1->name, room2->name) == 0) {
         return 0;
     }
 
@@ -86,8 +77,11 @@ int isConnected(room *room1, room *room2) {
         if (room1->connections[i] != NULL) {                                 // don't bother checking null connections
            // printf("conns[i].name is %d\n", room1.connections[i]->roomNum);
 
-            if (room1->connections[i]->roomNum == room2->roomNum) {                    // if they match
-                //printf("Returning 0 because %s is connected to %s\n", room1.name, room2.name);
+            if (strcmp(room1->connections[i]->name, room2->name) == 0) {
+//            if (room1->connections[i]->roomNum == room2->roomNum) {                    // if they match
+                //printf("Returning 0 because %s is connected to %s\n", room1->name, room2->name);
+                //printf("i is %d\n", i);
+                //printf("%s has max %d allowed connections\n", room1->name, room1->numConnections);
                 return 0;
             }
         }
@@ -98,38 +92,20 @@ int isConnected(room *room1, room *room2) {
 /* Connect two rooms together if possible */
 void connectRooms(room *room1, room *room2) {
     int i;
-    int connCount1 = 0;
-    int connCount2 = 0;
 
-    // first loop through and see how many connections have been made for both
-    for (i = 0; i < room1->numConnections; i++) {
-        if (room1->connections[i] != NULL) {
-            connCount1++;
-        }
-    }
-
-    //printf("connCount1 = %d\n", connCount1);
-    // if there is no room for more connections to room 1, return
-    if (connCount1 >= room1->numConnections) {
+    // check that connections aren't already maxed out
+    if (room1->tally >= room1->numConnections) {
         return;
     }
 
-    for (i = 0; i < room2->numConnections; i++) {
-        if (room2->connections[i] != NULL) {
-            connCount2++;
-        }
-    }
-
-    //printf("connCount2 = %d\n", connCount2);
-    // if there is no room for more connections to room 2, return
-    if (connCount2 >= room2->numConnections) {
+    if (room2->tally >= room2->numConnections) {
         return;
     }
 
     // if it gets here, then we should be able to connect the rooms
     // zero indexing allows inserting the connection at the connCount
-    room1->connections[connCount1] = room2;
-    room2->connections[connCount2] = room1;
+    room1->connections[room1->tally] = room2;
+    room2->connections[room2->tally] = room1;
 
     room1->tally = room1->tally + 1;
     room2->tally = room2->tally + 1;
@@ -146,7 +122,7 @@ void makeNull(room *inputRoom) {
     }
 }
 
-/* Function to randomly arrange rooms in roomNames array so we can skip the null assignment stuff */
+/* Function to randomly arrange values in array so we can skip the null assignment stuff */
 // Shuffle sourced from: http://stackoverflow.com/questions/6127503/shuffle-array-in-c
 void jumbler(char **nameArray, size_t size) {
     if (size > 1) {
@@ -162,14 +138,12 @@ void jumbler(char **nameArray, size_t size) {
 }
 
 void generateRoomFiles() {
+    printf("top of functin");
     int buffer = 30;
     int pid = getpid();
     char prefix[] = "ohaverd.rooms.";
-    int i, k, j;
-    int findName, findType;
-    room *activeRooms[7];               // array of pointers to room to  more easily loop through rooms
-    int startFlag = 0;                  // track if start room has been taken yet
-    int endFlag = 0;                    // track if end room has been taken yet
+    int i, k;
+    room activeRooms[7];               // array of pointers to room to  more easily loop through rooms
 
     char *dirName = malloc(buffer);
 
@@ -206,9 +180,6 @@ void generateRoomFiles() {
     roomTypes[5] = mid;
     roomTypes[6] = end;
 
-//    for (i = 0; i < 7; i++) {
-//        printf("room %d is of name %s\n", i, roomTypes[i]);
-//    }
     // mix up the room names
     jumbler(roomNames, 10);
 
@@ -223,38 +194,32 @@ void generateRoomFiles() {
     // mix up the room types
     jumbler(roomTypes, 7);
 
+    printf("Before room setup");
     for (i = 0; i < 7; i++) {
-        // allocate memory for the room
-        activeRooms[i] = (struct room *) malloc(sizeof(struct room));
-
-        findName = randRoom();
-
         // set the name of the room
-        strcpy(activeRooms[i]->name, usedRooms[i]);
+        strcpy(activeRooms[i].name, usedRooms[i]);
 
         // set the room number
-        activeRooms[i]->roomNum = i;
+        activeRooms[i].roomNum = i;
 
         // set the tally of connections so far
-        activeRooms[i]->tally = 0;
+        activeRooms[i].tally = 0;
 
         // find the number of connections the room can have
-        activeRooms[i]->numConnections = randNum();
-
-        findType = randType();
+        activeRooms[i].numConnections = randNum();
 
         // set the type of the room
-        strcpy(activeRooms[i]->roomtype, roomTypes[i]);
+        strcpy(activeRooms[i].roomtype, roomTypes[i]);
 
 
     }
 
 
 
-    for (i = 0; i < 7; i++) {
-        printf("%s has %d connections\n", activeRooms[i]->name, activeRooms[i]->numConnections);
-        printf("%s is of room type %s\n", activeRooms[i]->name, activeRooms[i]->roomtype);
-    }
+//    for (i = 0; i < 7; i++) {
+//        printf("%s has %d connections\n", activeRooms[i]->name, activeRooms[i]->numConnections);
+//        printf("%s is of room type %s\n", activeRooms[i]->name, activeRooms[i]->roomtype);
+//    }
 
     // now there are seven rooms named one through seven
     // set up the connections
@@ -264,30 +229,58 @@ void generateRoomFiles() {
     // loop through connections and make sure that they're null for everyone before we start making connections
 
     for (i = 0; i < 7; i++) {
-        makeNull(activeRooms[i]);
+        makeNull(&activeRooms[i]);
     }
 
     // now set up the connections
-
+    int finder = 0;
+    printf("Before connection making");
     for (i = 0; i < 7; i++) {
-        for (k = 0; k < activeRooms[i]->numConnections; k++) {
-            while (activeRooms[i]->connections[k] == NULL) {
-                findConn = randConn();
+        while (activeRooms[i].tally < 3) {
+            findConn = randConn();
 
-                if (findConn != i) {
-                    if (isConnected(activeRooms[i], activeRooms[findConn]) == 1) {
-                    connectRooms(activeRooms[i], activeRooms[findConn]);
-                    }
+            for (k = 0; k < activeRooms[i].numConnections; k++) {
+                if (activeRooms[i].connections[k]->roomNum == activeRooms[findConn].roomNum) {
+                    finder = 1;
                 }
             }
+
+            if (activeRooms[i].roomNum == activeRooms[findConn].roomNum) {
+                finder = 1;
+            }
+
+            if (activeRooms[i].tally == 6) {
+                finder = 1;
+            }
+
+            if (activeRooms[findConn].tally == 6) {
+                finder = 1;
+            }
+
+            if (finder != 1) {
+                int runTotal = activeRooms[i].tally;
+                memcpy(&activeRooms[i].connections[runTotal], &activeRooms[findConn], sizeof(room));
+                //activeRooms[i].connections[runTotal] = activeRooms[findConn];
+                activeRooms[i].tally++;
+
+                runTotal = activeRooms[findConn].tally;
+
+                memcpy(&activeRooms[findConn].connections[runTotal], &activeRooms[i], sizeof(room));
+                //activeRooms[findConn].connections[activeRooms[findConn].tally] = activeRooms[i];
+                activeRooms[findConn].tally++;
+            }
         }
+        finder = 0;
+
     }
-
     for (i = 0; i < 7; i++) {
-        printf("Connections for %s: \n", activeRooms[i]->name);
+        printf("Connections for %s: \n", activeRooms[i].name);
 
-        for (k = 0; k < activeRooms[i]->numConnections; k++) {
-            printf("%s\n", activeRooms[i]->connections[k]->name);
+        for (k = 0; k < activeRooms[i].numConnections; k++) {
+            if (activeRooms[i].connections[k] == NULL) {
+                printf("null where there shouldn't be one");
+            }
+            printf("%s\n", activeRooms[i].connections[k]->name);
         }
     }
 
@@ -296,7 +289,7 @@ void generateRoomFiles() {
 
 int main(void) {
     srand(time(NULL));      // seed rand
-    // The first thing your program must do is generate 7 different room files, one room per file, in a directory called <username>.rooms.<process id>
+    printf("wtf");
     generateRoomFiles();
 
     return 0;
