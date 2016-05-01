@@ -111,7 +111,9 @@ void playGame(room activeRooms[]) {
     room endRoom;
     room currentRoom;           // wherever the user is currently
     int steps = 0;
+    char pathtaken[200];        // string to store path taken by user
 
+    strcpy(pathtaken, "\n");    // so strcat can be used later down the line
 
     // first figure out which room is the start room
     for (i = 0; i < 7; i++) {
@@ -205,6 +207,10 @@ void playGame(room activeRooms[]) {
                 currentRoom = activeRooms[i];
                 // increment steps because we've found a valid room to move to
                 steps++;
+
+                // add room name to path
+                strcat(pathtaken, currentRoom.name);
+                strcat(pathtaken, "\n");
                 break;
             }
             if ((i == 6) && (strcmp(whereto, activeRooms[i].name) != 0)) {
@@ -214,8 +220,8 @@ void playGame(room activeRooms[]) {
     }
     // if it gets here, the user has found the end room
     printf("%s\n", found);
-    printf("%s %d %s\n", youtook, steps, path);
-
+    printf("%s %d %s", youtook, steps, path);
+    printf("%s", pathtaken);
 
 
 
