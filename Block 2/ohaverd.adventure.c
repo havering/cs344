@@ -50,8 +50,7 @@ struct room {
     int roomNum;
     int tally;                          // tracking current number of connections
     int numConnections;                 // tracking total allowed connections
-    //room *connections[6];                // better - array of room connections so can be iterated through
-    char connection1[20];
+    char connection1[20];               // here lies diana giving up on an elegant, modular solution to connections
     char connection2[20];
     char connection3[20];
     char connection4[20];
@@ -129,6 +128,7 @@ void playGame(room activeRooms[]) {
         }
     }
 
+    // user starts in the start room, surprising no one
     currentRoom = startRoom;
 
     while (currentRoom.roomNum != endRoom.roomNum) {
@@ -202,6 +202,7 @@ void playGame(room activeRooms[]) {
         // read in input from user
         scanf("%s", &whereto);
 
+        // loop through and look for a match between the user input and the room names
         for (i = 0; i < 7; i++) {
             if (strcmp(whereto, activeRooms[i].name) == 0) {
                 currentRoom = activeRooms[i];
@@ -213,13 +214,15 @@ void playGame(room activeRooms[]) {
                 strcat(pathtaken, "\n");
                 break;
             }
+            // if it gets to 6 and a match isn't found, output error and allow reloop to top
             if ((i == 6) && (strcmp(whereto, activeRooms[i].name) != 0)) {
                 printf("\n%s\n", error);
             }
         }
     }
+
     // if it gets here, the user has found the end room
-    printf("%s\n", found);
+    printf("\n%s\n", found);
     printf("%s %d %s", youtook, steps, path);
     printf("%s", pathtaken);
 
