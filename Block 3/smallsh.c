@@ -19,7 +19,10 @@
 #define INPUT_BUFFER 2048
 #define MAX_ARGS 512
 
+// globals
+int exitStatus = 0;                 // declaring this as a global so it doesn't need to be passed into each function
 
+// function prototypes
 void changeDir(char **args);
 int findStatus(char **args);
 int exitProg(char **args);
@@ -39,14 +42,19 @@ void changeDir(char **args) {
     }
     if (chdir(newDir) == -1) {
         printf("no such file or directory\n");
+        exitStatus = 1;             // return 1 on error
     }
 }
 
-int getStatus(char **args)
-{
-
+// function to return the status code of most recently exited process
+int getStatus(char **args) {
+    printf("exited with status %d\n", exitStatus);
+    // reset so valid exits are recorded correctly
+    exitStatus = 0;
+    return 1;
 }
 
+// function to exit program since Ctrl-C is not allowed
 int exitProg(char **args)
 {
   exit(0);
@@ -62,11 +70,15 @@ int lsh_launch(char **args)
     // Child process
     if (execvp(args[0], args) == -1) {
       perror("blap");
+      printf("error in execvp child process\n");
+      exitStatus = 1;
     }
     exit(EXIT_FAILURE);
   } else if (pid < 0) {
     // Error forking
     perror("bloop");
+    printf("error in forking (pid < 0)\n");
+    exitStatus = 1;
   } else {
     // Parent process
     do {
@@ -78,7 +90,7 @@ int lsh_launch(char **args)
 }
 
 // function to test that cd is actually working
-// exampel of pwd implementation: http://stackoverflow.com/questions/16285623/pwd-to-get-path-to-the-current-file
+// example of pwd implementation: http://stackoverflow.com/questions/16285623/pwd-to-get-path-to-the-current-file
 void mypwd(char **args) {
     char cwd[1024];
 
@@ -107,10 +119,8 @@ char* getInput() {
     return buffer;
 }
 
-int executeArgs(char **args, int status) {
+int executeArgs(char **args) {
     int i;
-
-    printf("args[0] is %s\n", args[0]);
 
     if (args[0] == NULL) {
         // An empty command was entered.
@@ -144,8 +154,8 @@ int executeArgs(char **args, int status) {
         mypwd(args);
         return 1;
     }
-    //return lsh_launch(args);
-    return 1;
+    return lsh_launch(args);
+    //return 1;
 }
 
 // function to split the input line and evaluate what the user wants to do
@@ -157,10 +167,9 @@ char** splitArgs(char *line) {
     char** commandArray = (char**)malloc(sizeof(char*) * MAX_ARGS);
 
     token = strtok(line, " ");
-    printf("token is |%s|\n", token);
+
     while (token != NULL) {
         commandArray[i] = token;
-        printf("token is |%s|\n", token);
         i++;
         token = strtok(NULL, " ");
     }
@@ -180,7 +189,7 @@ void runProg(void) {
     printf(": ");                   // print prompt
     line = getInput();              // read line from command line input
     args = splitArgs(line);    // split line into arguments
-    status = executeArgs(args, status);     // execute the arguments
+    status = executeArgs(args);     // execute the arguments
 
     free(line);
     free(args);
