@@ -12,9 +12,13 @@
 
 #include <stdio.h>
 #include <sys/wait.h>
+#include <sys/types.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #define INPUT_BUFFER 2048
 #define MAX_ARGS 512
@@ -48,42 +52,185 @@ void changeDir(char **args) {
 
 // function to return the status code of most recently exited process
 int getStatus(char **args) {
-    printf("exited with status %d\n", exitStatus);
+
+    if (errno > 0) {
+         printf("exited with status %d\n", errno);
+    }
+
+   else {
+        printf("exited with status 0\n");
+   }
+
     // reset so valid exits are recorded correctly
-    exitStatus = 0;
+    //exitStatus = 0;
+    errno = 0;
     return 1;
 }
 
-// function to exit program since Ctrl-C is not allowed
-int exitProg(char **args)
-{
-  exit(0);
+// function to handle input of Ctrl+C without killing entire program
+int killForeground(int signal) {
+    pid_t pid;
+
+
+
 }
 
-int lsh_launch(char **args)
-{
-  pid_t pid, wpid;
-  int status;
+// function to exit program since Ctrl-C is not allowed
+int exitProg(char **args) {
+    exit(0);
+}
 
-  pid = fork();
-  if (pid == 0) {
-    // Child process
-    if (execvp(args[0], args) == -1) {
-      perror("blap");
-      printf("error in execvp child process\n");
-      exitStatus = 1;
+int ssh_launch(char **args) {
+    pid_t pid, wpid, child_id;
+    int status;
+    int background = 0;           // hold whether or not the user has specified a background process
+    int infile, outfile, in, out;
+    int wantsInput = 0;             // 0 for false
+    int wantsOutput = 0;            // 0 for false
+    int printed = 0;
+
+      // ignoring SIGINT signal in child process: http://stackoverflow.com/questions/12953350/ignore-sigint-signal-in-child-process
+    struct sigaction action;
+    action.sa_handler = SIG_IGN;          // ignore by default
+    sigaction(SIGINT, &action, NULL);
+
+
+    // find out how many commands the user entered
+    int count = 0;
+
+    while (args[count] != NULL) {
+        count++;
     }
-    exit(EXIT_FAILURE);
-  } else if (pid < 0) {
+
+    // check if the user wants a background process
+    if (strcmp(args[count-1], "&") == 0) {
+        background = 1;             // user wants the args to be a background process
+    }
+
+    // grading script example has second argument as i/o command
+    // check for user wants to output
+    // example of redirecting output to a file: http://stackoverflow.com/questions/8516823/redirecting-output-to-a-file-in-c
+    // arguments for open: http://pubs.opengroup.org/onlinepubs/009695399/basedefs/fcntl.h.html
+    if (strcmp(args[1], ">") == 0) {
+        // 0600 is owner has rw, everyone else has nothing: https://codex.wordpress.org/Changing_File_Permissions
+        outfile = open(args[2], O_RDWR|O_CREAT|O_APPEND, 0600);
+
+        wantsOutput = 1;        // true
+
+        // check for errors
+        if (outfile == -1) {
+            perror("opening output file");
+            exitStatus = 1;
+        }
+    }
+
+    // now same thing, but checking for input direction
+    if (strcmp(args[1], "<") == 0) {
+        // input file only needs to be read_only
+        if (args[2] != NULL) {
+            infile = open(args[2], O_RDONLY);
+        }
+        // "Background commands should have their standard input redirected from /dev/null if the user did not specify some other file to take standard input from."
+        // example at: http://stackoverflow.com/questions/14846768/in-c-how-do-i-redirect-stdout-fileno-to-dev-null-using-dup2-and-then-redirect
+        else {
+            infile = open("/dev/null", O_WRONLY);
+        }
+
+
+        wantsInput = 1;         // true
+
+        // check for errors
+        if (infile == -1) {
+            perror("opening input file");
+            exitStatus = 1;
+        }
+    }
+
+    pid = fork();
+
+    if (pid == 0) {                           // Child process
+        if (background == 0) {                  // if it is not supposed to be a background process, it can be interrupted
+            action.sa_handler = SIG_DFL;        // default value i.e. not ignore kill signals
+            action.sa_flags = 0;
+            sigaction(SIGINT, &action, NULL);
+        }
+        // if it is a background process: "The shell will print the process id of a background process when it begins."
+        else {
+            setpgid(0, 0);
+            printf("background process id: %d\n", pid);
+            fflush(stdout);
+        }
+
+
+        if (wantsOutput == 1) {
+            // all i/o redirection must be with dup2 per specs
+            out = dup2(outfile, 1);
+
+            // check for errors
+            if (out == -1) {
+                perror("dup2 error: outputfile");
+                exitStatus = 1;
+            }
+        }
+
+        if (wantsInput == 1) {
+            // all i/o redirection must be with dup2 per specs
+            // 0 is stdin
+            in = dup2(infile, 0);
+
+            // check for errors
+            if (in == -1) {
+                perror("dup2 error: inputfile");
+                exitStatus = 1;
+            }
+        }
+
+
+        if (execvp(args[0], args) == -1) {
+            perror("error");
+            printf("error in execvp child process\n");        // don't forget to comment this out
+            exitStatus = 1;
+        }
+        exit(EXIT_FAILURE);
+  }
+
+  else if (pid < 0) {
     // Error forking
-    perror("bloop");
-    printf("error in forking (pid < 0)\n");
+    perror("error");
+    printf("error in forking (pid < 0)\n");             // don't forget to comment this out
     exitStatus = 1;
-  } else {
+  }
+
+  else {
     // Parent process
-    do {
-      wpid = waitpid(pid, &status, WUNTRACED);
-    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    if (background == 1) {
+        printf("background process id: %d\n", pid);
+        fflush(stdout);
+    }
+
+    // close in/outfiles
+    if (wantsInput == 1) {
+        close(infile);
+    }
+
+    if (wantsOutput == 1) {
+        close(outfile);
+    }
+
+    // check if background has been chosen
+    // if not, wait process to complete before moving on
+    if (background == 0) {
+        wpid = waitpid(pid, &status, WUNTRACED);
+    }
+
+    // if it is a background process, don't bother waiting
+    if (background == 1) {
+        do {
+            wpid = waitpid(-1, &status, WNOHANG);
+        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    }
+
+
   }
 
   return 1;
@@ -154,8 +301,9 @@ int executeArgs(char **args) {
         mypwd(args);
         return 1;
     }
-    return lsh_launch(args);
-    //return 1;
+
+    // if it gets here, then it's a non built in command and we can start forking
+    return ssh_launch(args);
 }
 
 // function to split the input line and evaluate what the user wants to do
@@ -178,8 +326,6 @@ char** splitArgs(char *line) {
     return commandArray;
 }
 
-
-
 void runProg(void) {
   char *line;
   char **args;
@@ -187,8 +333,9 @@ void runProg(void) {
 
   do {
     printf(": ");                   // print prompt
+    fflush(stdout);
     line = getInput();              // read line from command line input
-    args = splitArgs(line);    // split line into arguments
+    args = splitArgs(line);         // split line into arguments
     status = executeArgs(args);     // execute the arguments
 
     free(line);
