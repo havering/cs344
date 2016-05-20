@@ -106,6 +106,8 @@ int ssh_launch(char **args) {
     if (strcmp(args[count-1], "&") == 0) {
             printf("background process detected\n");
         background = 1;             // user wants the args to be a background process
+
+        args[count-1] = NULL;
     }
 
     // grading script example has second argument as i/o command
@@ -197,7 +199,7 @@ int ssh_launch(char **args) {
 
         if (execvp(args[0], args) == -1) {
             perror("error");
-            printf("error in execvp child process\n");        // don't forget to comment this out
+            // printf("error in execvp child process\n");        // don't forget to comment this out
             exitStatus = 1;
         }
         exit(EXIT_FAILURE);
