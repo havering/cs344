@@ -104,6 +104,7 @@ int ssh_launch(char **args) {
 
     // check if the user wants a background process
     if (strcmp(args[count-1], "&") == 0) {
+            printf("background process detected\n");
         background = 1;             // user wants the args to be a background process
     }
 
@@ -111,7 +112,7 @@ int ssh_launch(char **args) {
     // check for user wants to output
     // example of redirecting output to a file: http://stackoverflow.com/questions/8516823/redirecting-output-to-a-file-in-c
     // arguments for open: http://pubs.opengroup.org/onlinepubs/009695399/basedefs/fcntl.h.html
-    if (strcmp(args[1], ">") == 0) {
+    if (args[1] && strcmp(args[1], ">") == 0) {
         // 0600 is owner has rw, everyone else has nothing: https://codex.wordpress.org/Changing_File_Permissions
         outfile = open(args[2], O_RDWR|O_CREAT|O_APPEND, 0600);
 
@@ -122,10 +123,15 @@ int ssh_launch(char **args) {
             perror("opening output file");
             exitStatus = 1;
         }
+
+        // set those spots in the argument to null so they don't get passed to exec
+        // credit to Shoshana Abrass for the suggestion
+        args[1] = NULL;
+        args[2] = NULL;
     }
 
     // now same thing, but checking for input direction
-    if (strcmp(args[1], "<") == 0) {
+    if (args[1] && strcmp(args[1], "<") == 0) {
         // input file only needs to be read_only
         if (args[2] != NULL) {
             infile = open(args[2], O_RDONLY);
@@ -144,6 +150,9 @@ int ssh_launch(char **args) {
             perror("opening input file");
             exitStatus = 1;
         }
+
+        args[1] = NULL;
+        args[2] = NULL;
     }
 
     pid = fork();
