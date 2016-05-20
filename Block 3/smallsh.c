@@ -67,14 +67,6 @@ int getStatus(char **args) {
     return 1;
 }
 
-// function to handle input of Ctrl+C without killing entire program
-int killForeground(int signal) {
-    pid_t pid;
-
-
-
-}
-
 // function to exit program since Ctrl-C is not allowed
 int exitProg(char **args) {
     exit(0);
@@ -123,7 +115,7 @@ int ssh_launch(char **args) {
         // check for errors
         if (outfile == -1) {
             perror("opening output file");
-            exitStatus = 1;
+            return 1;                      // exit or else it gets stuck here
         }
 
         // set those spots in the argument to null so they don't get passed to exec
@@ -150,7 +142,7 @@ int ssh_launch(char **args) {
         // check for errors
         if (infile == -1) {
             perror("opening input file");
-            exitStatus = 1;
+            return 1;                  // exit or else it gets stuck here
         }
 
         args[1] = NULL;
@@ -169,6 +161,7 @@ int ssh_launch(char **args) {
         else {
             setpgid(0, 0);
             printf("background process id: %d\n", pid);
+            background = 0;
             fflush(stdout);
         }
 
@@ -216,6 +209,7 @@ int ssh_launch(char **args) {
     // Parent process
     if (background == 1) {
         printf("background process id: %d\n", pid);
+        background = 0;
         fflush(stdout);
     }
 
