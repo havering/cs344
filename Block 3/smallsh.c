@@ -26,11 +26,6 @@
 // globals
 int exitStatus = 0;                 // declaring this as a global so it doesn't need to be passed into each function
 
-// function prototypes
-void changeDir(char **args);
-int findStatus(char **args);
-int exitProg(char **args);
-
 // called when user wants to change directory
 // example of changing directory in C: http://stackoverflow.com/questions/1293660/is-there-any-way-to-change-directory-using-c-language
 void changeDir(char **args) {
@@ -46,6 +41,7 @@ void changeDir(char **args) {
     }
     if (chdir(newDir) == -1) {
         printf("no such file or directory\n");
+        fflush(stdout);
         exitStatus = 1;             // return 1 on error
     }
 }
@@ -53,17 +49,18 @@ void changeDir(char **args) {
 // function to return the status code of most recently exited process
 int getStatus(char **args) {
 
-    if (errno > 0) {
-         printf("exited with status %d\n", errno);
+    // exiting with status 1 issue: http://stackoverflow.com/questions/3736320/executing-shell-script-with-system-returns-256-what-does-that-mean
+    if (exitStatus == 256) {
+        printf("exited with status 1\n");
+    }
+    else {
+        printf("exited with status %d\n", exitStatus);
     }
 
-   else {
-        printf("exited with status 0\n");
-   }
-
     // reset so valid exits are recorded correctly
-    //exitStatus = 0;
-    errno = 0;
+    exitStatus = 0;
+    fflush(stdout);
+
     return 1;
 }
 
@@ -75,7 +72,7 @@ int exitProg(char **args) {
 int ssh_launch(char **args) {
     pid_t pid, wpid, child_id;
     int status;
-    int background = 0;           // hold whether or not the user has specified a background process
+    int background = 0;             // hold whether or not the user has specified a background process
     int infile, outfile, in, out;
     int wantsInput = 0;             // 0 for false
     int wantsOutput = 0;            // 0 for false
@@ -96,7 +93,6 @@ int ssh_launch(char **args) {
 
     // check if the user wants a background process
     if (strcmp(args[count-1], "&") == 0) {
-            printf("background process detected\n");
         background = 1;             // user wants the args to be a background process
 
         args[count-1] = NULL;
@@ -115,6 +111,7 @@ int ssh_launch(char **args) {
         // check for errors
         if (outfile == -1) {
             perror("opening output file");
+            exitStatus = 1;
             return 1;                      // exit or else it gets stuck here
         }
 
@@ -142,6 +139,7 @@ int ssh_launch(char **args) {
         // check for errors
         if (infile == -1) {
             perror("opening input file");
+            exitStatus = 1;
             return 1;                  // exit or else it gets stuck here
         }
 
@@ -157,17 +155,10 @@ int ssh_launch(char **args) {
             action.sa_flags = 0;
             sigaction(SIGINT, &action, NULL);
         }
-        // if it is a background process: "The shell will print the process id of a background process when it begins."
-        else {
-            setpgid(0, 0);
-            printf("background process id: %d\n", pid);
-            background = 0;
-            fflush(stdout);
-        }
-
 
         if (wantsOutput == 1) {
             // all i/o redirection must be with dup2 per specs
+            // 1 is stdout
             out = dup2(outfile, 1);
 
             // check for errors
@@ -192,7 +183,6 @@ int ssh_launch(char **args) {
 
         if (execvp(args[0], args) == -1) {
             perror("error");
-            // printf("error in execvp child process\n");        // don't forget to comment this out
             exitStatus = 1;
         }
         exit(EXIT_FAILURE);
@@ -201,17 +191,11 @@ int ssh_launch(char **args) {
   else if (pid < 0) {
     // Error forking
     perror("error");
-    printf("error in forking (pid < 0)\n");             // don't forget to comment this out
     exitStatus = 1;
   }
 
   else {
-    // Parent process
-    if (background == 1) {
-        printf("background process id: %d\n", pid);
-        background = 0;
-        fflush(stdout);
-    }
+
 
     // close in/outfiles
     if (wantsInput == 1) {
@@ -223,19 +207,15 @@ int ssh_launch(char **args) {
     }
 
     // check if background has been chosen
-    // if not, wait process to complete before moving on
+    // if not, wait for process to complete before moving on
     if (background == 0) {
         wpid = waitpid(pid, &status, WUNTRACED);
+        exitStatus = status;
     }
-
-    // if it is a background process, don't bother waiting
-    if (background == 1) {
-        do {
-            wpid = waitpid(-1, &status, WNOHANG);
-        } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    // if it is a background process, per specs, print out the pid and return control to command line
+    else {
+        printf("background process is %d\n", pid);
     }
-
-
   }
 
   return 1;
@@ -248,6 +228,7 @@ void mypwd(char **args) {
 
     getcwd(cwd, sizeof(cwd));
     printf("Current working directory: %s\n", cwd);
+    fflush(stdout);
 }
 
 // function to read in input from the user
@@ -331,12 +312,33 @@ char** splitArgs(char *line) {
     return commandArray;
 }
 
+// function to check for child processes ending
+void checkChildren() {
+    int status;
+    pid_t cpid;
+
+    while ((cpid = waitpid(-1, &status, WNOHANG)) > 0) {
+        printf("background process id is %d\n", cpid);
+
+        if (WIFEXITED(status)) {
+            printf("exited with status %d\n", status);
+        }
+        else if (WIFSIGNALED(status)) {
+            printf("terminated with signal %d\n", WTERMSIG(status));
+        }
+    }
+}
+
+// main loop to run program
 void runProg(void) {
   char *line;
   char **args;
   int status;
 
+
   do {
+    checkChildren();                // check for ending child processes
+    fflush(stdout);
     printf(": ");                   // print prompt
     fflush(stdout);
     line = getInput();              // read line from command line input
