@@ -98,53 +98,59 @@ int ssh_launch(char **args) {
         args[count-1] = NULL;
     }
 
-    // grading script example has second argument as i/o command
     // check for user wants to output
     // example of redirecting output to a file: http://stackoverflow.com/questions/8516823/redirecting-output-to-a-file-in-c
     // arguments for open: http://pubs.opengroup.org/onlinepubs/009695399/basedefs/fcntl.h.html
-    if (args[1] && strcmp(args[1], ">") == 0) {
-        // 0600 is owner has rw, everyone else has nothing: https://codex.wordpress.org/Changing_File_Permissions
-        outfile = open(args[2], O_RDWR|O_CREAT|O_APPEND, 0600);
 
-        wantsOutput = 1;        // true
+    int track = 0;
 
-        // check for errors
-        if (outfile == -1) {
-            perror("opening output file");
-            exitStatus = 1;
-            return 1;                      // exit or else it gets stuck here
+    while (args[track] != NULL) {
+        if (strcmp(args[track], ">") == 0) {
+
+            // 0600 is owner has rw, everyone else has nothing: https://codex.wordpress.org/Changing_File_Permissions
+            outfile = open(args[track+1], O_RDWR|O_CREAT|O_APPEND, 0600);
+
+            wantsOutput = 1;        // true
+
+            // check for errors
+            if (outfile == -1) {
+                perror("opening output file");
+                exitStatus = 1;
+                return 1;                      // exit or else it gets stuck here
+            }
+
+            // set those spots in the argument to null so they don't get passed to exec
+            // credit to Shoshana Abrass for the suggestion
+            args[track] = NULL;
+            args[track+1] = NULL;
         }
 
-        // set those spots in the argument to null so they don't get passed to exec
-        // credit to Shoshana Abrass for the suggestion
-        args[1] = NULL;
-        args[2] = NULL;
-    }
+        // now same thing, but checking for input direction
+        else if (strcmp(args[track], "<") == 0) {
+             // input file only needs to be read_only
+            if (args[track+1] != NULL) {
+                infile = open(args[track+1], O_RDONLY);
+            }
+            // "Background commands should have their standard input redirected from /dev/null if the user did not specify some other file to take standard input from."
+            // example at: http://stackoverflow.com/questions/14846768/in-c-how-do-i-redirect-stdout-fileno-to-dev-null-using-dup2-and-then-redirect
+            else {
+                infile = open("/dev/null", O_WRONLY);
+            }
 
-    // now same thing, but checking for input direction
-    if (args[1] && strcmp(args[1], "<") == 0) {
-        // input file only needs to be read_only
-        if (args[2] != NULL) {
-            infile = open(args[2], O_RDONLY);
+
+            wantsInput = 1;         // true
+
+            // check for errors
+            if (infile == -1) {
+                perror("opening input file");
+                exitStatus = 1;
+                return 1;                  // exit or else it gets stuck here
+            }
+
+            args[track] = NULL;
+            args[track+1] = NULL;
         }
-        // "Background commands should have their standard input redirected from /dev/null if the user did not specify some other file to take standard input from."
-        // example at: http://stackoverflow.com/questions/14846768/in-c-how-do-i-redirect-stdout-fileno-to-dev-null-using-dup2-and-then-redirect
-        else {
-            infile = open("/dev/null", O_WRONLY);
-        }
-
-
-        wantsInput = 1;         // true
-
-        // check for errors
-        if (infile == -1) {
-            perror("opening input file");
-            exitStatus = 1;
-            return 1;                  // exit or else it gets stuck here
-        }
-
-        args[1] = NULL;
-        args[2] = NULL;
+        track++;
     }
 
     pid = fork();
