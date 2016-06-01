@@ -25,10 +25,7 @@ int randNum() {
 
 // function to randomize allowed characters and write them to file of specified length
 void randomize(int numChars) {
-    //FILE *fp;
     int counter, num;
-
-    //fp = fopen(filename, "w+");
 
     counter = 0;
 
@@ -48,15 +45,8 @@ void randomize(int numChars) {
 
 int main(int argc, char **argv) {
     srand(time(NULL));
-    // ensure enough arguments passed in
-//    if (argc != 4) {
-//        printf("Usage: keygen numchars > filename\n");
-//        exit(1);
-//    }
 
-    //char *filename = argv[3];
     int numChars = atoi(argv[1]);
 
-    //printf("numchars is %d", numChars);
     randomize(numChars);
 }
