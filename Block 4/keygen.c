@@ -20,7 +20,7 @@ char characters[] = { 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'
 
 // function to return a random number between 0 and 27
 int randNum() {
-    return rand() % 28;
+    return rand() % 27;
 }
 
 // function to randomize allowed characters and write them to file of specified length
