@@ -11,8 +11,20 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
-#include <ctype.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <dirent.h>
+#include <fcntl.h>
+
+
+// globals - largest file we're working with is < 70k characters
+int MAX_SIZE = 70000;
 
 /* Function to check that key and plaintext files contain valid characters */
 void goodChars(char *filename) {
@@ -44,6 +56,10 @@ void goodChars(char *filename) {
     }
 
     } while (1);
+
+    fclose(fp);
+
+    return;
 }
 
 /* Function to check the length of the file for comparison in main */
@@ -68,13 +84,20 @@ int findLength(char *filename) {
         }
     } while (1);
 
+    fclose(fp);
+
     return length;
 }
 
 int main(int argc, char **argv) {
     char *keyname, *textname;
-    int port, keyLength, plainLength;
+    int port, keyLength, plainLength, sockfd, sentBytes, fd, sizer, receivedBytes, i;
+    struct sockaddr_in server;
+    struct hostent *server_ip_address;       // this acts as client to otp_enc_d server
+    char buffer[MAX_SIZE];
+    char receiveBuffer[MAX_SIZE];
 
+    /**** Input validation ****/
     // usage requires 4 arguments
     if (argc != 4) {
         printf("Usage: ./otp_enc plaintext key port\n");
@@ -104,5 +127,71 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
+    // read file into a buffer to send to otp_enc_d
+    if ((fd = open(textname, O_RDONLY)) == -1) {
+        perror("file open error");
+        exit(1);
+    }
+
+    sizer = read(fd, buffer, MAX_SIZE);
+
+    /**** Set the socket and connection ****/
+    // now that file validation is done, set up the connection
+    // code borrowed and adapted from my own code in CS 372 (Networks) as well as Lecture 16
+    // if otp_enc cannot find port given, should report error to screen with bad port and exit value of 2
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        printf("otp_enc socket error on port %d\n", port);
+        exit(2);
+    }
+
+    // make sure that server has no data in it
+    memset(&server, '0', sizeof(server));
+
+    server_ip_address = gethostbyname("localhost");
+
+    if (server_ip_address == NULL) {
+        fprintf(stderr, "could not resolve server host name\n");
+        exit(1);
+    }
+
+    // set the port to the given port and the version to IPv4
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+
+    if (connect(sockfd, (struct sockaddr *) &server, sizeof(server)) < 0) {
+        perror("otp_enc connect error");
+        exit(1);
+    }
+
+    /**** Send and receive data ****/
+
+     // send the file to otp_enc_d
+    sentBytes = write(sockfd, buffer, sizer - 1);
+
+    if (sentBytes < sentBytes - 1) {
+        perror("sent less than original file");
+        exit(1);
+    }
+
+    // receive the return response - continue reading into buffer until server is done sending
+    do {
+        receivedBytes = read(sockfd, receiveBuffer, plainLength - 1);
+    } while (receivedBytes > 0);
+
+    if (receivedBytes == -1) {
+        perror("error reading from otp_enc_d");
+        exit(1);
+    }
+
+    // print it so the grading script can redirect it to the output file
+    for (i = 0; i < plainLength - 1; i++) {
+        printf("%c", receiveBuffer[i]);
+    }
+
+    // print newline to match specs
+    printf("\n");
+
+    // close it up
+    close(sockfd);
     exit(0);
 }
