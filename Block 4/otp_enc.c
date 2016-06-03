@@ -91,11 +91,19 @@ int findLength(char *filename) {
 
 int main(int argc, char **argv) {
     char *keyname, *textname;
-    int port, keyLength, plainLength, sockfd, sentBytes, fd, sizer, receivedBytes, i;
+    int port, keyLength, plainLength, sockfd, sentBytes, fd, fdkey, fileSize, keySize, receivedBytes, i, fileResponse;
     struct sockaddr_in server;
     struct hostent *server_ip_address;       // this acts as client to otp_enc_d server
-    char buffer[MAX_SIZE];
+    char fileBuffer[MAX_SIZE];
+    char keyBuffer[MAX_SIZE];
     char receiveBuffer[MAX_SIZE];
+    char response[1];
+
+    // zero out char arrays to ensure no garbage values
+    memset(response, '0', 1);
+    memset(fileBuffer, '0', MAX_SIZE);
+    memset(keyBuffer, '0', MAX_SIZE);
+    memset(receiveBuffer, '0', MAX_SIZE);
 
     /**** Input validation ****/
     // usage requires 4 arguments
@@ -127,13 +135,25 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    // read file into a buffer to send to otp_enc_d
+    // read plaintext file into a buffer to send to otp_enc_d
     if ((fd = open(textname, O_RDONLY)) == -1) {
         perror("file open error");
         exit(1);
     }
 
-    sizer = read(fd, buffer, MAX_SIZE);
+    fileSize = read(fd, fileBuffer, MAX_SIZE);
+
+    // read key into a buffer to send to otp_enc_d
+    if ((fdkey = open(keyname, O_RDONLY)) == -1) {
+        perror("file open error");
+        exit(1);
+    }
+
+    keySize = read(fdkey, keyBuffer, MAX_SIZE);
+
+    // close them both
+    close(fd);
+    close(fdkey);
 
     /**** Set the socket and connection ****/
     // now that file validation is done, set up the connection
@@ -154,6 +174,9 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
+    // from lectures - copy everything over from server_ip_address into server
+    memcpy(&server.sin_addr, server_ip_address->h_addr, server_ip_address->h_length);
+
     // set the port to the given port and the version to IPv4
     server.sin_family = AF_INET;
     server.sin_port = htons(port);
@@ -165,15 +188,29 @@ int main(int argc, char **argv) {
 
     /**** Send and receive data ****/
 
-     // send the file to otp_enc_d
-    sentBytes = write(sockfd, buffer, sizer - 1);
+     // send the plaintext to otp_enc_d
+    sentBytes = write(sockfd, fileBuffer, fileSize - 1);
 
-    if (sentBytes < sentBytes - 1) {
-        perror("sent less than original file");
+    if (sentBytes < fileSize - 1) {
+        perror("sent less than original file (file)");
         exit(1);
     }
 
-    // receive the return response - continue reading into buffer until server is done sending
+    // get the response
+    if ((fileResponse = read(sockfd, response, 1)) < 0) {
+        perror("otp_enc response error");
+        exit(1);
+    }
+
+    // now send the key
+    sentBytes = write(sockfd, keyBuffer, keySize - 1);
+
+    if (sentBytes < keySize - 1) {
+        perror("sent less than original file (key)");
+        exit(1);
+    }
+
+    // receive the response back from the server
     do {
         receivedBytes = read(sockfd, receiveBuffer, plainLength - 1);
     } while (receivedBytes > 0);
