@@ -49,17 +49,17 @@ int main(int argc, char **argv) {
     port = atoi(argv[1]);
 
     // now set up the socket connection for otp_enc to grab onto
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         printf("otp_enc_d socket error on port %d\n", port);
         exit(2);
     }
 
     // make sure that server has no data in it
-    memset(&server, '0', sizeof(server));
+    memset(&server, 0, sizeof(server));
 
     // set the server to ipv4, listening for all connections, using passed in port
     server.sin_family = AF_INET;
-    server.sin_addr.s_addr = htonl(INADDR_ANY);
+    server.sin_addr.s_addr = INADDR_ANY;
     server.sin_port = htons(port);
 
     // make it so that sockets can be reused
@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
     }
 
     // bind server to assigned port
-     if ((bind(sockfd, (struct sockaddr*)&server, sizeof(server))) == -1) {
+     if ((bind(sockfd, (struct sockaddr*)&server, sizeof(server))) < 0) {
             perror("otp_enc_d bind error");
             exit(1);
     }
@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
             continue;
         }
         // if no error, go ahead and fork
-        else {
+        //else {
             pid = fork();
 
             if (pid < 0) {
@@ -100,12 +100,12 @@ int main(int argc, char **argv) {
             // child process should be the one handling everything
             if (pid == 0) {
                 // zero out buffers to ensure no garbage data
-                memset(textBuffer, '0', MAX_SIZE);
-                memset(keyBuffer, '0', MAX_SIZE);
-                memset(sendBuffer, '0', MAX_SIZE);
+                memset(textBuffer, 0, MAX_SIZE);
+                memset(keyBuffer, 0, MAX_SIZE);
+                memset(sendBuffer, 0, MAX_SIZE);
 
                 // plaintext is always sent first, grab that info
-                if ((plainLength = read(client_sockfd, textBuffer, MAX_SIZE)) == -1) {
+                if ((plainLength = read(client_sockfd, textBuffer, MAX_SIZE)) < 0) {
                     perror("error reading plaintext");
                     exit(1);
                 }
@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
                 }
 
                // now get the key
-                if ((keyLength = read(client_sockfd, keyBuffer, MAX_SIZE)) == -1) {
+                if ((keyLength = read(client_sockfd, keyBuffer, MAX_SIZE)) < 0) {
                     perror("error reading key");
                     exit(1);
                 }
@@ -170,12 +170,13 @@ int main(int argc, char **argv) {
                 // close the sockets up
                 close(client_sockfd);
                 close(sockfd);
+                exit(0);
             }
             else {
                 // if it is parent, do close it up
                 close(client_sockfd);
             }
-        }
+        //}
 
     }
 

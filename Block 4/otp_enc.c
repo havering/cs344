@@ -100,10 +100,10 @@ int main(int argc, char **argv) {
     char response[1];
 
     // zero out char arrays to ensure no garbage values
-    memset(response, '0', 1);
-    memset(fileBuffer, '0', MAX_SIZE);
-    memset(keyBuffer, '0', MAX_SIZE);
-    memset(receiveBuffer, '0', MAX_SIZE);
+    memset(response, 0, 1);
+    memset(fileBuffer, 0, MAX_SIZE);
+    memset(keyBuffer, 0, MAX_SIZE);
+    memset(receiveBuffer, 0, MAX_SIZE);
 
     /**** Input validation ****/
     // usage requires 4 arguments
@@ -136,7 +136,7 @@ int main(int argc, char **argv) {
     }
 
     // read plaintext file into a buffer to send to otp_enc_d
-    if ((fd = open(textname, O_RDONLY)) == -1) {
+    if ((fd = open(textname, O_RDONLY)) < 0) {
         perror("file open error");
         exit(1);
     }
@@ -144,7 +144,7 @@ int main(int argc, char **argv) {
     fileSize = read(fd, fileBuffer, MAX_SIZE);
 
     // read key into a buffer to send to otp_enc_d
-    if ((fdkey = open(keyname, O_RDONLY)) == -1) {
+    if ((fdkey = open(keyname, O_RDONLY)) < 0) {
         perror("file open error");
         exit(1);
     }
@@ -159,13 +159,13 @@ int main(int argc, char **argv) {
     // now that file validation is done, set up the connection
     // code borrowed and adapted from my own code in CS 372 (Networks) as well as Lecture 16
     // if otp_enc cannot find port given, should report error to screen with bad port and exit value of 2
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         printf("otp_enc socket error on port %d\n", port);
         exit(2);
     }
 
     // make sure that server has no data in it
-    memset(&server, '0', sizeof(server));
+    memset(&server, 0, sizeof(server));
 
     server_ip_address = gethostbyname("localhost");
 
@@ -174,11 +174,13 @@ int main(int argc, char **argv) {
         exit(1);
     }
 
-    // from lectures - copy everything over from server_ip_address into server
-    memcpy(&server.sin_addr, server_ip_address->h_addr, server_ip_address->h_length);
-
-    // set the port to the given port and the version to IPv4
+    // ipv4
     server.sin_family = AF_INET;
+
+    // copy everything over from server_ip_address into server
+    bcopy((char *)server_ip_address->h_addr, (char *)&server.sin_addr.s_addr, server_ip_address->h_length);
+
+    // set the port to the given port
     server.sin_port = htons(port);
 
     if (connect(sockfd, (struct sockaddr *) &server, sizeof(server)) < 0) {
@@ -211,17 +213,18 @@ int main(int argc, char **argv) {
     }
 
     // receive the response back from the server
+    // stops when there's nothing left to read (-1 returned)
     do {
-        receivedBytes = read(sockfd, receiveBuffer, plainLength - 1);
+        receivedBytes = read(sockfd, receiveBuffer, fileSize - 1);
     } while (receivedBytes > 0);
 
-    if (receivedBytes == -1) {
+    if (receivedBytes < 0) {
         perror("error reading from otp_enc_d");
         exit(1);
     }
 
     // print it so the grading script can redirect it to the output file
-    for (i = 0; i < plainLength - 1; i++) {
+    for (i = 0; i < fileSize - 1; i++) {
         printf("%c", receiveBuffer[i]);
     }
 
