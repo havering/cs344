@@ -1,15 +1,17 @@
 // Diana O'Haver
 // Program 4
-// File: otp_enc_d.c
+// File: otp_dec_d.c
 
-// Program to perform encoding
+// Program to decrypt ciphertext
 // Program should:
+//      - Return plaintext to otp_dec
 //      - Run in the background as a daemon
 //      - Listen on a port assigned when first ran
-//      - Fork off process when making connection with otp_enc
+//      - Fork off process when making connection with otp_dec
 //      - Support up to five concurrent socket connections
 //      - Not crash or exit upon errors
 //      - Use localhost as target IP address/host
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,7 +43,7 @@ int main(int argc, char **argv) {
 
     // housekeeping to ensure that the program is used correctly
     if (argc != 2) {
-        printf("Usage: ./otp_enc_d port\n");
+        printf("Usage: ./otp_dec_d port\n");
         exit(1);
     }
 
@@ -50,7 +52,7 @@ int main(int argc, char **argv) {
 
     // now set up the socket connection for otp_enc to grab onto
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        printf("otp_enc_d socket error on port %d\n", port);
+        printf("otp_dec_d socket error on port %d\n", port);
         exit(2);
     }
 
@@ -70,13 +72,13 @@ int main(int argc, char **argv) {
 
     // bind server to assigned port
      if ((bind(sockfd, (struct sockaddr*)&server, sizeof(server))) < 0) {
-            perror("otp_enc_d bind error");
+            perror("otp_dec_d bind error");
             exit(1);
     }
 
     // then listen for connections, number limited by second argument
     if ((listen(sockfd, MAX_SOCKETS)) < 0) {
-        perror("otp_enc_d listen error");
+        perror("otp_dec_d listen error");
         exit(1);
     }
 
@@ -85,7 +87,7 @@ int main(int argc, char **argv) {
     for(;;) {
         // connect to client
         if ((client_sockfd = accept(sockfd, (struct sockaddr *) &client, &len)) < 0) {
-            perror("otp_enc_d accept error");
+            perror("otp_dec_d accept error");
             // don't exit since program can be accepting of multiple connections
             continue;
         }
@@ -94,7 +96,7 @@ int main(int argc, char **argv) {
             pid = fork();
 
             if (pid < 0) {
-                perror("otp_enc_d fork error");
+                perror("otp_dec_d fork error");
             }
 
             // child process should be the one handling everything
@@ -114,7 +116,7 @@ int main(int argc, char **argv) {
                 sentBytes = write(client_sockfd, "k", 1);
 
                 if (sentBytes < 0) {
-                    perror("otp_enc_d write error");
+                    perror("otp_dec_d write error");
                     exit(1);
                 }
 
@@ -135,15 +137,6 @@ int main(int argc, char **argv) {
                     //printf("received text %d\n", text);
                     //printf("received key %d\n", key);
 
-                    // add 59 to space to bring it to the next value after Z
-                    if (text == 32) {
-                        text += 59;
-                    }
-
-                    if (key == 32) {
-                        key += 59;
-                    }
-
                     // example given in specs has A - Z in the range of 0 - 26, so 27 with space
                     // subtract 64 to get values within that range
                     text = text - 65;
@@ -152,13 +145,13 @@ int main(int argc, char **argv) {
                     //printf("text after -65 is %d\n", text);
                     //printf("key after -65 is %d\n", key);
 
-                    // add the text and key back together
-                    int temp = text + key;
+                    // subtract the text and key from each other
+                    int temp = text - key;
 
                     //printf("temp is %d\n", temp);
 
-                    if (temp > 27) {
-                        temp = temp - 27;
+                    if (temp < 27) {
+                        temp = temp + 27;
                         //printf("temp was > 27, now is %d\n", temp);
                     }
 
@@ -166,8 +159,17 @@ int main(int argc, char **argv) {
 
                     //printf("temp mod 27 is now %d\n", temp);
 
-                    // bring it back into regular ASCII range
-                    temp = temp + 65;
+                    // if it's 26, it's a space, and it should be converted back to a space
+                    // which doesn't involve adding 65
+                    if (temp == 26) {
+                        temp = temp + 6;
+                    }
+
+                    else {
+                        // bring it back into regular ASCII range
+                        temp = temp + 65;
+                    }
+
 
                     //printf("adding 65 to temp makes %d\n", temp);
 
