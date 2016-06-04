@@ -126,9 +126,14 @@ int main(int argc, char **argv) {
                 // now encrypt the message using the key
                 // loop through the plaintext - if key is longer than plaintext, nbd
                 for (i = 0; i < plainLength; i++) {
+                    //printf("text is %c\n", textBuffer[i]);
+                    //printf("key is %c\n", keyBuffer[i]);
                     // typecast the chars to ints since we're doing math
                     int text = (int) textBuffer[i];
                     int key = (int) keyBuffer[i];
+
+                    //printf("received text %d\n", text);
+                    //printf("received key %d\n", key);
 
                     // add 59 to space to bring it to the next value after Z
                     if (text == 32) {
@@ -141,22 +146,36 @@ int main(int argc, char **argv) {
 
                     // example given in specs has A - Z in the range of 0 - 26, so 27 with space
                     // subtract 64 to get values within that range
-                    text = text - 64;
-                    key = key - 64;
+                    text = text - 65;
+                    key = key - 65;
+
+                    //printf("text after -65 is %d\n", text);
+                    //printf("key after -65 is %d\n", key);
 
                     // add the text and key back together
                     int temp = text + key;
 
-                    if (temp <= 27) {
-                        temp = temp % 27;
-                    }
-                    else {
-                        temp = temp - 27;
-                        temp = temp % 27;
+                    //printf("temp is %d\n", temp);
+
+                    if (temp > 26) {
+                        temp = temp - 26;
+                        //printf("temp was > 27, now is %d\n", temp);
                     }
 
-                    // add 0 to convert back to char: http://stackoverflow.com/questions/2279379/how-to-convert-integer-to-char-in-c
-                    sendBuffer[i] = temp + '0';
+                    temp = temp % 26;
+
+                    //printf("temp mod 27 is now %d\n", temp);
+
+                    // bring it back into regular ASCII range
+                    temp = temp + 65;
+
+                    //printf("adding 65 to temp makes %d\n", temp);
+
+
+                    temp = (char) temp;
+
+                    sendBuffer[i] = temp;
+                    //printf("sending temp %c\n", sendBuffer[i]);
                 }
 
                 // now send the encrypted buffer back to the client
@@ -170,6 +189,8 @@ int main(int argc, char **argv) {
                 // close the sockets up
                 close(client_sockfd);
                 close(sockfd);
+
+                // need exit(0) or else this will keep trying the closed socket: http://stackoverflow.com/questions/13287359/socket-bad-file-descriptor
                 exit(0);
             }
             else {
