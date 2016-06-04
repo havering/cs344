@@ -50,7 +50,7 @@ void goodChars(char *filename) {
     if (c < 65 || c > 90) {
         // if it isn't an all caps char, then it should only be a space or a newline
         if (c != 32 && c != 10) {
-            printf("ERROR: invalid characters in %s\n", filename);
+            fprintf(stderr, "ERROR: invalid characters in file\n");
             exit(1);
         }
     }
@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
     server_ip_address = gethostbyname("localhost");
 
     if (server_ip_address == NULL) {
-        fprintf(stderr, "could not resolve server host name\n");
+        printf("Error: could not connect to otp_enc_d\n");
         exit(1);
     }
 
@@ -193,6 +193,8 @@ int main(int argc, char **argv) {
      // send the plaintext to otp_enc_d
     sentBytes = write(sockfd, fileBuffer, fileSize - 1);
 
+    //printf("sent fileBuffer which is %s\n", fileBuffer);
+
     if (sentBytes < fileSize - 1) {
         perror("sent less than original file (file)");
         exit(1);
@@ -207,6 +209,8 @@ int main(int argc, char **argv) {
     // now send the key
     sentBytes = write(sockfd, keyBuffer, keySize - 1);
 
+    //printf("sent keyBuffer, which is %s\n", keyBuffer);
+
     if (sentBytes < keySize - 1) {
         perror("sent less than original file (key)");
         exit(1);
@@ -218,10 +222,10 @@ int main(int argc, char **argv) {
         receivedBytes = read(sockfd, receiveBuffer, fileSize - 1);
     } while (receivedBytes > 0);
 
-    if (receivedBytes < 0) {
-        perror("error reading from otp_enc_d");
-        exit(1);
-    }
+//    if (receivedBytes < 0) {
+//        perror("error reading from otp_enc_d");
+//        exit(1);
+//    }
 
     // print it so the grading script can redirect it to the output file
     for (i = 0; i < fileSize - 1; i++) {

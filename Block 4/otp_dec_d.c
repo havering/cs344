@@ -92,7 +92,6 @@ int main(int argc, char **argv) {
             continue;
         }
         // if no error, go ahead and fork
-        //else {
             pid = fork();
 
             if (pid < 0) {
@@ -128,22 +127,14 @@ int main(int argc, char **argv) {
                 // now encrypt the message using the key
                 // loop through the plaintext - if key is longer than plaintext, nbd
                 for (i = 0; i < plainLength; i++) {
-                    //printf("text is %c\n", textBuffer[i]);
-                    //printf("key is %c\n", keyBuffer[i]);
                     // typecast the chars to ints since we're doing math
                     int text = (int) textBuffer[i];
                     int key = (int) keyBuffer[i];
-
-                    //printf("received text %d\n", text);
-                    //printf("received key %d\n", key);
 
                     // example given in specs has A - Z in the range of 0 - 26, so 27 with space
                     // subtract 64 to get values within that range
                     text = text - 65;
                     key = key - 65;
-
-                    //printf("text after -65 is %d\n", text);
-                    //printf("key after -65 is %d\n", key);
 
                     // subtract the text and key from each other
                     int temp = text - key;
@@ -152,12 +143,9 @@ int main(int argc, char **argv) {
 
                     if (temp < 27) {
                         temp = temp + 27;
-                        //printf("temp was > 27, now is %d\n", temp);
                     }
 
                     temp = temp % 27;
-
-                    //printf("temp mod 27 is now %d\n", temp);
 
                     // if it's 26, it's a space, and it should be converted back to a space
                     // which doesn't involve adding 65
@@ -170,14 +158,9 @@ int main(int argc, char **argv) {
                         temp = temp + 65;
                     }
 
-
-                    //printf("adding 65 to temp makes %d\n", temp);
-
-
                     temp = (char) temp;
 
                     sendBuffer[i] = temp;
-                    //printf("sending temp %c\n", sendBuffer[i]);
                 }
 
                 // now send the encrypted buffer back to the client
@@ -199,8 +182,6 @@ int main(int argc, char **argv) {
                 // if it is parent, do close it up
                 close(client_sockfd);
             }
-        //}
-
     }
 
 }

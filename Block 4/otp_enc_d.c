@@ -51,11 +51,11 @@ int main(int argc, char **argv) {
     // now set up the socket connection for otp_enc to grab onto
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         printf("otp_enc_d socket error on port %d\n", port);
-        exit(2);
+        exit(1);
     }
 
     // make sure that server has no data in it
-    memset(&server, 0, sizeof(server));
+    memset(&server, '\0', sizeof(server));
 
     // set the server to ipv4, listening for all connections, using passed in port
     server.sin_family = AF_INET;
@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
     }
 
     // bind server to assigned port
-     if ((bind(sockfd, (struct sockaddr*)&server, sizeof(server))) < 0) {
+     if (bind(sockfd, (struct sockaddr*)&server, sizeof(server)) < 0) {
             perror("otp_enc_d bind error");
             exit(1);
     }
@@ -90,7 +90,6 @@ int main(int argc, char **argv) {
             continue;
         }
         // if no error, go ahead and fork
-        //else {
             pid = fork();
 
             if (pid < 0) {
@@ -123,17 +122,13 @@ int main(int argc, char **argv) {
                     perror("error reading key");
                     exit(1);
                 }
+
                 // now encrypt the message using the key
                 // loop through the plaintext - if key is longer than plaintext, nbd
                 for (i = 0; i < plainLength; i++) {
-                    //printf("text is %c\n", textBuffer[i]);
-                    //printf("key is %c\n", keyBuffer[i]);
                     // typecast the chars to ints since we're doing math
                     int text = (int) textBuffer[i];
                     int key = (int) keyBuffer[i];
-
-                    //printf("received text %d\n", text);
-                    //printf("received key %d\n", key);
 
                     // add 59 to space to bring it to the next value after Z
                     if (text == 32) {
@@ -149,33 +144,22 @@ int main(int argc, char **argv) {
                     text = text - 65;
                     key = key - 65;
 
-                    //printf("text after -65 is %d\n", text);
-                    //printf("key after -65 is %d\n", key);
-
                     // add the text and key back together
                     int temp = text + key;
 
-                    //printf("temp is %d\n", temp);
-
                     if (temp > 27) {
                         temp = temp - 27;
-                        //printf("temp was > 27, now is %d\n", temp);
                     }
 
                     temp = temp % 27;
 
-                    //printf("temp mod 27 is now %d\n", temp);
-
                     // bring it back into regular ASCII range
                     temp = temp + 65;
 
-                    //printf("adding 65 to temp makes %d\n", temp);
-
-
+                    // convert it back to char, adding '0' is total garbage and doesn't work
                     temp = (char) temp;
 
                     sendBuffer[i] = temp;
-                    //printf("sending temp %c\n", sendBuffer[i]);
                 }
 
                 // now send the encrypted buffer back to the client
@@ -197,8 +181,6 @@ int main(int argc, char **argv) {
                 // if it is parent, do close it up
                 close(client_sockfd);
             }
-        //}
-
     }
 
 }

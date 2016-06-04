@@ -185,7 +185,7 @@ int main(int argc, char **argv) {
     server.sin_port = htons(port);
 
     if (connect(sockfd, (struct sockaddr *) &server, sizeof(server)) < 0) {
-        perror("otp_enc connect error");
+        perror("otp_dec connect error");
         exit(1);
     }
 
@@ -201,7 +201,7 @@ int main(int argc, char **argv) {
 
     // get the response
     if ((fileResponse = read(sockfd, response, 1)) < 0) {
-        perror("otp_enc response error");
+        perror("otp_dec response error");
         exit(1);
     }
 
@@ -218,11 +218,6 @@ int main(int argc, char **argv) {
     do {
         receivedBytes = read(sockfd, receiveBuffer, fileSize - 1);
     } while (receivedBytes > 0);
-
-    if (receivedBytes < 0) {
-        perror("error reading from otp_enc_d");
-        exit(1);
-    }
 
     // print it so the grading script can redirect it to the output file
     for (i = 0; i < fileSize - 1; i++) {
