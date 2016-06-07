@@ -31,13 +31,15 @@ int MAX_SIZE = 70000;       // largest file we're working with is < 70k characte
 // additional example of running process as a daemon from: http://www.thegeekstuff.com/2012/02/c-daemon-process/
 int main(int argc, char **argv) {
     struct sockaddr_in server, client;
-    int sockfd, port, client_sockfd, sentBytes, plainLength, keyLength, i;
+    int sockfd, port, client_sockfd, sentBytes, plainLength, keyLength, i, handshakeLength;
     pid_t pid;
     socklen_t len;
     int one = 1;
     char textBuffer[MAX_SIZE];
     char keyBuffer[MAX_SIZE];
     char sendBuffer[MAX_SIZE];
+    char handshakeBuffer[MAX_SIZE];
+    char handshake[11] = "yes hello";
 
     // housekeeping to ensure that the program is used correctly
     if (argc != 2) {
@@ -103,6 +105,22 @@ int main(int argc, char **argv) {
                 memset(keyBuffer, 0, MAX_SIZE);
                 memset(sendBuffer, 0, MAX_SIZE);
 
+                // get the handshake
+                if ((handshakeLength = read(client_sockfd, handshakeBuffer, MAX_SIZE)) < 0) {
+                    perror("otp_enc_d read error");
+                    exit(1);
+                }
+
+                if (strcmp(handshake, handshakeBuffer) == 0) {
+                    // send back single byte ACK
+                    sentBytes = write(client_sockfd, "k", 1);
+                }
+                else {
+                    sentBytes = write(client_sockfd, "n", 1);
+                }
+
+
+
                 // plaintext is always sent first, grab that info
                 if ((plainLength = read(client_sockfd, textBuffer, MAX_SIZE)) < 0) {
                     perror("error reading plaintext");
@@ -147,14 +165,20 @@ int main(int argc, char **argv) {
                     // add the text and key back together
                     int temp = text + key;
 
-                    if (temp > 27) {
+                    if (temp >= 27) {
                         temp = temp - 27;
                     }
 
                     temp = temp % 27;
 
                     // bring it back into regular ASCII range
-                    temp = temp + 65;
+                    if (temp == 26) {
+                        temp = 32;
+                    }
+                    else {
+                        temp = temp + 65;
+                    }
+
 
                     // convert it back to char, adding '0' is total garbage and doesn't work
                     temp = (char) temp;

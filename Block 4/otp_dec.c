@@ -98,7 +98,8 @@ int main(int argc, char **argv) {
     char fileBuffer[MAX_SIZE];
     char keyBuffer[MAX_SIZE];
     char receiveBuffer[MAX_SIZE];
-    char response[1];
+    char response[2];
+    char handshake[6] = "ohai";
 
     // zero out char arrays to ensure no garbage values
     memset(response, 0, 1);
@@ -190,7 +191,17 @@ int main(int argc, char **argv) {
     }
 
     /**** Send and receive data ****/
+    // send the handshake to ensure that it can connect
+    sentBytes = write(sockfd, handshake, 5);
 
+    if ((fileResponse = read(sockfd, response, 1)) < 0) {
+        perror("otp_enc response error after handshake");
+    }
+
+    if (strcmp(response, "k") != 0) {
+        printf("Error: otp_enc not allowed access to port %d\n", port);
+        exit(1);
+    }
      // send the plaintext to otp_enc_d
     sentBytes = write(sockfd, fileBuffer, fileSize - 1);
 
